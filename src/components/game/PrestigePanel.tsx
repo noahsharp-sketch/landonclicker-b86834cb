@@ -1,3 +1,4 @@
+// Keep your imports
 import type { GameState, SkillNode, AscensionNode } from '@/hooks/useGameState';
 
 interface PrestigePanelProps {
@@ -141,16 +142,14 @@ export function PrestigePanel({
           <h3 className="text-[10px] md:text-xs text-neon-yellow mb-2">Prestige Skills</h3>
           <div className="flex flex-wrap justify-center items-center gap-2 md:gap-4">
             {gameState.skillTree.map((node, index) => (
-              <div key={node.id} className="flex items-center">
+              <div key={node.id} className="flex flex-col items-center">
                 <SkillNodeButton 
                   node={node} 
                   points={gameState.prestigePoints}
                   onBuy={() => handleBuyNode(node.id)}
                   color="yellow"
                 />
-                {index < gameState.skillTree.length - 1 && (
-                  <div className="w-4 md:w-8 h-0.5 bg-border mx-1" />
-                )}
+                <span className="text-[8px] md:text-[10px] mt-1">Effect: {node.effect}</span>
               </div>
             ))}
           </div>
@@ -161,15 +160,13 @@ export function PrestigePanel({
           <h3 className="text-[10px] md:text-xs text-neon-purple mb-2">Ascension Skills</h3>
           <div className="flex flex-wrap justify-center items-center gap-2 md:gap-4">
             {gameState.ascensionTree.map((node, index) => (
-              <div key={node.id} className="flex items-center">
+              <div key={node.id} className="flex flex-col items-center">
                 <AscensionNodeButton 
                   node={node} 
                   points={gameState.ascensionPoints}
                   onBuy={() => handleBuyAscensionNode(node.id)}
                 />
-                {index < gameState.ascensionTree.length - 1 && (
-                  <div className="w-4 md:w-8 h-0.5 bg-neon-purple/30 mx-1" />
-                )}
+                <span className="text-[8px] md:text-[10px] mt-1">Effect: {node.effect}</span>
               </div>
             ))}
           </div>
