@@ -1,34 +1,76 @@
 import { formatNumber } from '@/lib/formatNumber';
+import { AudioControls } from './AudioControls';
+import { AchievementsPanel } from './AchievementsPanel';
+import type { Achievement } from '@/hooks/useGameState';
 
 interface StatsBarProps {
   clicks: number;
   cps: number;
   lifetimeClicks: number;
   clickPower: number;
+  achievements: Achievement[];
+  audioSettings: {
+    volume: number;
+    sfxEnabled: boolean;
+    musicEnabled: boolean;
+  };
+  onVolumeChange: (volume: number) => void;
+  onSfxToggle: (enabled: boolean) => void;
+  onMusicToggle: (enabled: boolean) => void;
+  playAchievement: () => void;
 }
 
-export function StatsBar({ clicks, cps, lifetimeClicks, clickPower }: StatsBarProps) {
+export function StatsBar({ 
+  clicks, 
+  cps, 
+  lifetimeClicks, 
+  clickPower,
+  achievements,
+  audioSettings,
+  onVolumeChange,
+  onSfxToggle,
+  onMusicToggle,
+  playAchievement,
+}: StatsBarProps) {
   return (
-    <header className="bg-card border-b-2 border-primary neon-border p-3 md:p-4">
-      <div className="container mx-auto flex flex-wrap items-center justify-between gap-2 md:gap-4">
-        <h1 className="text-lg md:text-xl text-primary neon-text">🐻 Landon Clicker</h1>
-        <div className="flex flex-wrap gap-3 md:gap-6 text-[10px] md:text-xs">
-          <div className="text-center">
-            <span className="text-muted-foreground block">Clicks</span>
-            <span className="text-primary font-bold">{formatNumber(clicks)}</span>
+    <header className="bg-card border-b-2 border-primary neon-border px-4 py-3">
+      <div className="container mx-auto flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-primary neon-text text-sm md:text-lg font-bold">
+          🐻 Landon Clicker
+        </h1>
+
+        <div className="flex flex-wrap items-center gap-3 md:gap-6 text-[10px] md:text-xs">
+          <div>
+            <span className="text-muted-foreground">Clicks: </span>
+            <span className="text-foreground font-bold">{formatNumber(clicks)}</span>
           </div>
-          <div className="text-center">
-            <span className="text-muted-foreground block">CPS</span>
+          <div>
+            <span className="text-muted-foreground">CPS: </span>
             <span className="text-secondary font-bold">{formatNumber(cps)}</span>
           </div>
-          <div className="text-center">
-            <span className="text-muted-foreground block">Lifetime</span>
-            <span className="text-neon-yellow font-bold">{formatNumber(lifetimeClicks)}</span>
+          <div className="hidden sm:block">
+            <span className="text-muted-foreground">Lifetime: </span>
+            <span className="text-foreground">{formatNumber(lifetimeClicks)}</span>
           </div>
-          <div className="text-center">
-            <span className="text-muted-foreground block">Power</span>
-            <span className="text-neon-green font-bold">{clickPower}</span>
+          <div className="hidden sm:block">
+            <span className="text-muted-foreground">Power: </span>
+            <span className="text-primary">{formatNumber(clickPower)}</span>
           </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <AchievementsPanel 
+            achievements={achievements} 
+            playAchievement={playAchievement}
+          />
+          <AudioControls
+            volume={audioSettings.volume}
+            sfxEnabled={audioSettings.sfxEnabled}
+            musicEnabled={audioSettings.musicEnabled}
+            onVolumeChange={onVolumeChange}
+            onSfxToggle={onSfxToggle}
+            onMusicToggle={onMusicToggle}
+          />
         </div>
       </div>
     </header>
