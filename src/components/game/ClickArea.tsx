@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import landonImage from '@/assets/landon.jpeg';
+import landonImage from '@/assets/landon.png';
 
 interface FloatingNumber {
   id: number;
