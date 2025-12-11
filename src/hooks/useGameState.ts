@@ -59,27 +59,20 @@ export interface GameState {
 const STORAGE_KEY = 'landon-clicker-save';
 
 export function useGameState() {
-  const initialUpgrades: Upgrade[] = [
-    { id: 'energy', name: '⚡ Energy Drink', description: '+2 click power', baseCost: 100, costMultiplier: 1.15, owned: 0, effect: 2, type: 'clickPower' },
-    { id: 'bear', name: '🐻 Bear', description: '+4 click power', baseCost: 10000, costMultiplier: 1.2, owned: 0, effect: 4, type: 'clickPower' },
-    { id: 'sean', name: "💜 Sean's Love", description: '+1 CPS', baseCost: 1000, costMultiplier: 1.15, owned: 0, effect: 1, type: 'autoClicker' },
-    { id: 'benicio', name: "💖 Benicio's Love", description: '+3 CPS', baseCost: 100000, costMultiplier: 1.2, owned: 0, effect: 3, type: 'autoClicker' },
-  ];
+  const [gameState, setGameState] = useState<GameState>(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return { ...getInitialState(), ...parsed };
+      } catch {
+        return getInitialState();
+      }
+    }
+    return getInitialState();
+  });
 
-  const initialSkillTree: SkillNode[] = [
-    { id: 'a', name: 'Click Fury', description: '2x click power', cost: 1, owned: false, effect: 2, type: 'clickMulti' },
-    { id: 'b', name: 'Auto Boost', description: '1.5x auto-clickers', cost: 2, owned: false, effect: 1.5, type: 'cpsBoost' },
-  ];
-
-  const initialAscensionTree: AscensionNode[] = [
-    { id: 'asc1', name: 'Prestige Master', description: '2x prestige gain', cost: 1, owned: false, effect: 2, type: 'prestigeMulti' },
-    { id: 'asc2', name: 'Universal Power', description: '3x all production', cost: 2, owned: false, effect: 3, type: 'allMulti' },
-  ];
-
-  const createInitialAchievements = (): Achievement[] => [
-    { id: 'first_click', name: 'First Click', description: 'Click for the first time', icon: '👆', unlocked: false, condition: (s) => s.lifetimeClicks >= 1 },
-    { id: 'cps_10', name: 'Automation', description: 'Reach 10 CPS', icon: '⚙️', unlocked: false, condition: (s) => s.cps >= 10 },
-  ];
+  const lastTickRef = useRef(Date.now());
 
   function getInitialState(): GameState {
     return {
@@ -99,20 +92,9 @@ export function useGameState() {
     };
   }
 
-  const [gameState, setGameState] = useState<GameState>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        return { ...getInitialState(), ...JSON.parse(saved) };
-      } catch {
-        return getInitialState();
-      }
-    }
-    return getInitialState();
-  });
+  // ----------------- Functions -----------------
 
-  const lastTickRef = useRef(Date.now());
-
+  // Calculate click power
   const calculateClickPower = useCallback((state: GameState) => {
     let power = 1;
     state.upgrades.filter(u => u.type === 'clickPower').forEach(u => power += u.effect * u.owned);
@@ -121,14 +103,25 @@ export function useGameState() {
     return power;
   }, []);
 
+  // Calculate CPS based on user's click power
   const calculateCPS = useCallback((state: GameState) => {
     let cps = 0;
     state.upgrades.filter(u => u.type === 'autoClicker').forEach(u => {
-      cps += u.effect * state.clickPower * u.owned;
+      cps += u.effect * u.owned * state.clickPower; // each auto-clicker now uses clickPower
     });
     const cpsBoost = state.skillTree.find(s => s.id === 'b' && s.owned);
     if (cpsBoost) cps *= cpsBoost.effect;
     return cps;
+  }, []);
+
+  // Calculate prestige gain (fixed formula: lifetimeClicks / 1M)
+  const calculatePrestigeGain = useCallback((state: GameState) => {
+    return Math.floor(state.lifetimeClicks / 1_000_000);
+  }, []);
+
+  // Calculate ascension gain (fixed formula: sqrt(totalPrestigePoints / 100))
+  const calculateAscensionGain = useCallback((state: GameState) => {
+    return Math.floor(Math.sqrt(state.totalPrestigePoints / 100));
   }, []);
 
   const handleClick = useCallback(() => {
@@ -143,96 +136,93 @@ export function useGameState() {
     setGameState(prev => {
       const upgrade = prev.upgrades.find(u => u.id === id);
       if (!upgrade) return prev;
-      const cost = Math.floor(upgrade.baseCost * Math.pow(upgrade.costMultiplier, upgrade.owned));
-      if (prev.clicks < cost) return prev;
+      if (prev.clicks < upgrade.baseCost) return prev;
+
       const newUpgrades = prev.upgrades.map(u => u.id === id ? { ...u, owned: u.owned + 1 } : u);
-      const newState = { ...prev, clicks: prev.clicks - cost, upgrades: newUpgrades };
+      const newState = { ...prev, upgrades: newUpgrades, clicks: prev.clicks - upgrade.baseCost };
       return { ...newState, clickPower: calculateClickPower(newState), cps: calculateCPS(newState) };
     });
   }, [calculateClickPower, calculateCPS]);
-
-  const buySkillNode = useCallback((id: string) => {
-    setGameState(prev => {
-      const node = prev.skillTree.find(n => n.id === id);
-      if (!node || node.owned || prev.prestigePoints < node.cost) return prev;
-      const newSkillTree = prev.skillTree.map(n => n.id === id ? { ...n, owned: true } : n);
-      const newState = { ...prev, prestigePoints: prev.prestigePoints - node.cost, skillTree: newSkillTree };
-      return { ...newState, clickPower: calculateClickPower(newState), cps: calculateCPS(newState) };
-    });
-  }, [calculateClickPower, calculateCPS]);
-
-  const buyAscensionNode = useCallback((id: string) => {
-    setGameState(prev => {
-      const node = prev.ascensionTree.find(n => n.id === id);
-      if (!node || node.owned || prev.ascensionPoints < node.cost) return prev;
-      const newAscTree = prev.ascensionTree.map(n => n.id === id ? { ...n, owned: true } : n);
-      return { ...prev, ascensionPoints: prev.ascensionPoints - node.cost, ascensionTree: newAscTree };
-    });
-  }, []);
 
   const prestige = useCallback(() => {
     setGameState(prev => {
-      const gain = Math.floor(prev.lifetimeClicks / 1_000_000); // fixed formula
+      const gain = calculatePrestigeGain(prev);
       if (gain <= 0) return prev;
+
       return {
         ...getInitialState(),
         prestigePoints: prev.prestigePoints + gain,
         totalPrestigePoints: prev.totalPrestigePoints + gain,
-        upgrades: prev.upgrades.map(u => ({ ...u, owned: 0 })),
-        skillTree: prev.skillTree,
-        ascensionTree: prev.ascensionTree,
-        achievements: prev.achievements,
       };
     });
-  }, []);
+  }, [calculatePrestigeGain]);
 
   const ascend = useCallback(() => {
     setGameState(prev => {
-      const gain = Math.floor(Math.sqrt(prev.totalPrestigePoints / 100));
+      const gain = calculateAscensionGain(prev);
       if (gain <= 0) return prev;
+
       return {
         ...getInitialState(),
         ascensionPoints: prev.ascensionPoints + gain,
         totalAscensionPoints: prev.totalAscensionPoints + gain,
-        ascensionTree: prev.ascensionTree,
-        achievements: prev.achievements,
       };
     });
-  }, []);
+  }, [calculateAscensionGain]);
 
-  const saveGame = useCallback(() => localStorage.setItem(STORAGE_KEY, JSON.stringify(gameState)), [gameState]);
-
+  // Auto-clicker loop
   useEffect(() => {
     const interval = setInterval(() => {
       const now = Date.now();
       const delta = (now - lastTickRef.current) / 1000;
       lastTickRef.current = now;
+
       setGameState(prev => ({
         ...prev,
         clicks: prev.clicks + prev.cps * delta,
         lifetimeClicks: prev.lifetimeClicks + prev.cps * delta,
       }));
     }, 100);
+
     return () => clearInterval(interval);
   }, []);
 
+  // Auto-save
   useEffect(() => {
-    const interval = setInterval(saveGame, 30000);
+    const interval = setInterval(() => localStorage.setItem(STORAGE_KEY, JSON.stringify(gameState)), 30000);
     return () => clearInterval(interval);
-  }, [saveGame]);
-
-  useEffect(() => {
-    setGameState(prev => ({ ...prev, clickPower: calculateClickPower(prev), cps: calculateCPS(prev) }));
-  }, [calculateClickPower, calculateCPS]);
+  }, [gameState]);
 
   return {
     gameState,
     handleClick,
     buyUpgrade,
-    buySkillNode,
-    buyAscensionNode,
     prestige,
     ascend,
-    saveGame,
+    calculatePrestigeGain,
+    calculateAscensionGain,
   };
+}
+
+// ----------------- Initial Data -----------------
+
+const initialUpgrades: Upgrade[] = [
+  { id: 'energy', name: '⚡ Energy Drink', description: '+2 click power', baseCost: 100, costMultiplier: 1.15, owned: 0, effect: 2, type: 'clickPower' },
+  { id: 'sean', name: "💜 Sean's Love", description: '+1 auto-clicker', baseCost: 1000, costMultiplier: 1.15, owned: 0, effect: 1, type: 'autoClicker' },
+];
+
+const initialSkillTree: SkillNode[] = [
+  { id: 'a', name: 'Click Fury', description: '2x click power', cost: 1, owned: false, effect: 2, type: 'clickMulti' },
+  { id: 'b', name: 'Auto Boost', description: '1.5x auto-clickers', cost: 2, owned: false, effect: 1.5, type: 'cpsBoost' },
+];
+
+const initialAscensionTree: AscensionNode[] = [
+  { id: 'asc1', name: 'Prestige Master', description: '2x prestige gain', cost: 1, owned: false, effect: 2, type: 'prestigeMulti' },
+  { id: 'asc2', name: 'Universal Power', description: '3x all production', cost: 2, owned: false, effect: 3, type: 'allMulti' },
+];
+
+function createInitialAchievements(): Achievement[] {
+  return [
+    { id: 'first_click', name: 'First Click', description: 'Click for the first time', icon: '👆', unlocked: false, condition: s => s.lifetimeClicks >= 1 },
+  ];
 }
