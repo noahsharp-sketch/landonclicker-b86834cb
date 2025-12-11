@@ -1,5 +1,4 @@
 import type { GameState } from '@/hooks/useGameState';
-import { getUpgradeCost } from '@/hooks/useGameState';
 
 interface UpgradesPanelProps {
   gameState: GameState;
@@ -8,6 +7,11 @@ interface UpgradesPanelProps {
 }
 
 export function UpgradesPanel({ gameState, buyUpgrade, playPurchase }: UpgradesPanelProps) {
+  // Old upgrade cost logic (adjust as needed)
+  const getUpgradeCost = (upgrade: any) => {
+    return upgrade.baseCost * (upgrade.level + 1);
+  };
+
   return (
     <div className="bg-card p-4 rounded neon-border">
       <h3 className="text-[10px] md:text-xs mb-2">Upgrades</h3>
