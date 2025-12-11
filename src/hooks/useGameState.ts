@@ -94,7 +94,6 @@ export function useGameState() {
 
   // ----------------- Functions -----------------
 
-  // Calculate click power
   const calculateClickPower = useCallback((state: GameState) => {
     let power = 1;
     state.upgrades.filter(u => u.type === 'clickPower').forEach(u => power += u.effect * u.owned);
@@ -103,23 +102,20 @@ export function useGameState() {
     return power;
   }, []);
 
-  // Calculate CPS based on user's click power
   const calculateCPS = useCallback((state: GameState) => {
     let cps = 0;
     state.upgrades.filter(u => u.type === 'autoClicker').forEach(u => {
-      cps += u.effect * u.owned * state.clickPower; // each auto-clicker now uses clickPower
+      cps += u.effect * u.owned * state.clickPower;
     });
     const cpsBoost = state.skillTree.find(s => s.id === 'b' && s.owned);
     if (cpsBoost) cps *= cpsBoost.effect;
     return cps;
   }, []);
 
-  // Calculate prestige gain (fixed formula: lifetimeClicks / 1M)
   const calculatePrestigeGain = useCallback((state: GameState) => {
     return Math.floor(state.lifetimeClicks / 1_000_000);
   }, []);
 
-  // Calculate ascension gain (fixed formula: sqrt(totalPrestigePoints / 100))
   const calculateAscensionGain = useCallback((state: GameState) => {
     return Math.floor(Math.sqrt(state.totalPrestigePoints / 100));
   }, []);
@@ -209,20 +205,28 @@ export function useGameState() {
 const initialUpgrades: Upgrade[] = [
   { id: 'energy', name: '⚡ Energy Drink', description: '+2 click power', baseCost: 100, costMultiplier: 1.15, owned: 0, effect: 2, type: 'clickPower' },
   { id: 'sean', name: "💜 Sean's Love", description: '+1 auto-clicker', baseCost: 1000, costMultiplier: 1.15, owned: 0, effect: 1, type: 'autoClicker' },
+  { id: 'super_click', name: 'Super Click', description: '+5 click power', baseCost: 5000, costMultiplier: 1.2, owned: 0, effect: 5, type: 'clickPower' },
+  { id: 'robot_arm', name: 'Robot Arm', description: '+5 auto-clickers', baseCost: 10000, costMultiplier: 1.25, owned: 0, effect: 5, type: 'autoClicker' },
+  { id: 'mega_energy', name: 'Mega Energy', description: '+10 click power', baseCost: 50000, costMultiplier: 1.3, owned: 0, effect: 10, type: 'clickPower' },
+  { id: 'hyper_arm', name: 'Hyper Arm', description: '+10 auto-clickers', baseCost: 100000, costMultiplier: 1.35, owned: 0, effect: 10, type: 'autoClicker' },
 ];
 
 const initialSkillTree: SkillNode[] = [
   { id: 'a', name: 'Click Fury', description: '2x click power', cost: 1, owned: false, effect: 2, type: 'clickMulti' },
   { id: 'b', name: 'Auto Boost', description: '1.5x auto-clickers', cost: 2, owned: false, effect: 1.5, type: 'cpsBoost' },
+  { id: 'c', name: 'Starter Boost', description: 'Start with extra clicks', cost: 3, owned: false, effect: 100, type: 'startingClicks' },
 ];
 
 const initialAscensionTree: AscensionNode[] = [
   { id: 'asc1', name: 'Prestige Master', description: '2x prestige gain', cost: 1, owned: false, effect: 2, type: 'prestigeMulti' },
   { id: 'asc2', name: 'Universal Power', description: '3x all production', cost: 2, owned: false, effect: 3, type: 'allMulti' },
+  { id: 'asc3', name: 'Mega Start', description: 'Start with more clicks', cost: 3, owned: false, effect: 500, type: 'megaStart' },
 ];
 
 function createInitialAchievements(): Achievement[] {
   return [
     { id: 'first_click', name: 'First Click', description: 'Click for the first time', icon: '👆', unlocked: false, condition: s => s.lifetimeClicks >= 1 },
+    { id: 'century', name: '100 Clicks', description: 'Reach 100 clicks', icon: '💯', unlocked: false, condition: s => s.lifetimeClicks >= 100 },
+    { id: 'thousand', name: '1000 Clicks', description: 'Reach 1,000 clicks', icon: '🎉', unlocked: false, condition: s => s.lifetimeClicks >= 1000 },
   ];
 }
