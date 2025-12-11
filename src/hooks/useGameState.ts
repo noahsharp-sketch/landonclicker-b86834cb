@@ -25,7 +25,7 @@ export interface PrestigeNode {
   id: string;
   name: string;
   cost: number;
-  effectDescription: string; // label for UI
+  effectDescription: string; // UI label
   owned: boolean;
   type: 'clickPowerMulti' | 'autoClickerMulti' | 'costReduction';
   effect: number;
@@ -35,7 +35,7 @@ export interface AscensionNode {
   id: string;
   name: string;
   cost: number;
-  effectDescription: string; // label for UI
+  effectDescription: string; // UI label
   owned: boolean;
   type: 'allMulti' | 'startingClicks';
   effect: number;
@@ -67,7 +67,7 @@ const createAchievements = (): Achievement[] => [
   { id: 'prestige_1', name: 'Prestige Starter', description: 'Prestige for the first time', icon: '✨', unlocked: false, condition: s => s.totalPrestigePoints >= 1 },
 ];
 
-// --- Prestige & Ascension Nodes with labels ---
+// --- Prestige & Ascension Nodes ---
 const initialPrestigeNodes: PrestigeNode[] = [
   { id: 'clickMulti', name: 'Click Power Booster', cost: 1, effectDescription: '2× Click Power', owned: false, type: 'clickPowerMulti', effect: 2 },
   { id: 'autoBoost', name: 'Auto-Clicker Boost', cost: 2, effectDescription: '1.5× Auto-Clickers', owned: false, type: 'autoClickerMulti', effect: 1.5 },
@@ -104,6 +104,7 @@ export function useGameState() {
     };
   }
 
+  // --- Calculations ---
   const calcClickPower = (s: GameState) => {
     let cp = 1 + s.upgrades.filter(u => u.type === 'clickPower').reduce((a, u) => a + u.effect * u.owned, 0);
     s.prestigeTree.filter(n => n.owned && n.type === 'clickPowerMulti').forEach(n => cp *= n.effect);
@@ -119,6 +120,7 @@ export function useGameState() {
   };
 
   const calculatePrestigeGain = (s: GameState) => Math.floor(s.lifetimeClicks / 1000000);
+  const calculateAscensionGain = (s: GameState) => Math.floor(Math.sqrt(s.totalPrestigePoints / 100));
 
   const updateState = useCallback((fn: (s: GameState) => GameState) => {
     setGameState(prev => {
@@ -188,5 +190,15 @@ export function useGameState() {
     return () => { clearInterval(interval); window.removeEventListener('beforeunload', save); };
   }, [gameState]);
 
-  return { gameState, handleClick, buyUpgrade, buyPrestigeNode, buyAscensionNode, prestige, resetGame, calculatePrestigeGain };
+  return {
+    gameState,
+    handleClick,
+    buyUpgrade,
+    buyPrestigeNode,
+    buyAscensionNode,
+    prestige,
+    resetGame,
+    calculatePrestigeGain,
+    calculateAscensionGain, // ✅ now included
+  };
 }
