@@ -6,17 +6,24 @@ interface UpgradesPanelProps {
 }
 
 export function UpgradesPanel({ gameState, onBuyUpgrade }: UpgradesPanelProps) {
+  const clickUpgrades = gameState.upgrades.filter(u => u.type === 'clickPower');
+  const autoClickers = gameState.upgrades.filter(u => u.type === 'autoClicker');
+
   return (
     <div className="bg-card border-t-2 border-primary neon-border p-4">
-      <h3 className="text-neon-yellow text-[10px] md:text-xs mb-2">Upgrades</h3>
-      <div className="flex flex-wrap gap-2 md:gap-4">
-        {gameState.upgrades.map((upg) => (
-          <UpgradeButton
-            key={upg.id}
-            upg={upg}
-            points={gameState.clicks}
-            onBuy={() => onBuyUpgrade(upg.id)}
-          />
+      {/* Click Power Upgrades */}
+      <h3 className="text-neon-yellow text-[10px] md:text-xs mb-2">Click Power Upgrades</h3>
+      <div className="grid grid-cols-4 gap-2 md:gap-4 mb-4">
+        {clickUpgrades.map(upg => (
+          <UpgradeButton key={upg.id} upg={upg} points={gameState.clicks} onBuy={() => onBuyUpgrade(upg.id)} />
+        ))}
+      </div>
+
+      {/* Auto-Clickers */}
+      <h3 className="text-neon-purple text-[10px] md:text-xs mb-2">Auto-Clickers</h3>
+      <div className="grid grid-cols-4 gap-2 md:gap-4">
+        {autoClickers.map(upg => (
+          <UpgradeButton key={upg.id} upg={upg} points={gameState.clicks} onBuy={() => onBuyUpgrade(upg.id)} />
         ))}
       </div>
     </div>
@@ -33,16 +40,17 @@ function UpgradeButton({ upg, points, onBuy }: { upg: Upgrade; points: number; o
       disabled={!canAfford}
       title={`${upg.name}: ${upg.description} (Cost: ${cost})`}
       className={`
-        w-12 h-12 md:w-14 md:h-14 rounded-full flex flex-col items-center justify-center text-[8px] md:text-[10px] font-bold transition-all
+        w-full aspect-square rounded-md flex flex-col items-center justify-center text-[8px] md:text-[10px] font-bold transition-all
+        px-2 py-1
         ${upg.owned > 0
-          ? 'bg-neon-green text-background neon-border'
+          ? 'bg-neon-green text-background neon-border border-2'
           : canAfford
-            ? 'bg-card border-2 border-neon-yellow text-neon-yellow hover:scale-110 cursor-pointer'
+            ? 'bg-card border-2 border-neon-yellow text-neon-yellow hover:scale-105 cursor-pointer'
             : 'bg-muted border-2 border-muted-foreground text-muted-foreground cursor-not-allowed'}
       `}
     >
-      <div className="text-center leading-tight">
-        <span className="block">{upg.id.toUpperCase()}</span>
+      <div className="text-center leading-tight overflow-visible">
+        <span className="block">{upg.name}</span>
         {!upg.owned && <span className="block text-[6px] md:text-[8px]">Cost: {cost}</span>}
         {upg.owned > 0 && <span className="block text-[6px] md:text-[8px]">{upg.owned} owned</span>}
       </div>
