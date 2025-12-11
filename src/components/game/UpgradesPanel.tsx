@@ -7,7 +7,6 @@ interface UpgradesPanelProps {
 }
 
 export function UpgradesPanel({ gameState, onBuyUpgrade }: UpgradesPanelProps) {
-  // Separate auto-clickers from normal upgrades
   const clickUpgrades = gameState.upgrades.filter(u => u.type === 'clickPower');
   const autoClickers = gameState.upgrades.filter(u => u.type === 'autoClicker');
 
@@ -16,7 +15,7 @@ export function UpgradesPanel({ gameState, onBuyUpgrade }: UpgradesPanelProps) {
       <div className="container mx-auto">
         {/* Click Power Upgrades */}
         <h3 className="text-[10px] md:text-xs text-neon-yellow mb-2">Upgrades</h3>
-        <div className="grid grid-cols-3 md:grid-cols-5 gap-2 mb-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
           {clickUpgrades.map(upg => (
             <UpgradeButton
               key={upg.id}
@@ -29,7 +28,7 @@ export function UpgradesPanel({ gameState, onBuyUpgrade }: UpgradesPanelProps) {
 
         {/* Auto Clickers */}
         <h3 className="text-[10px] md:text-xs text-neon-purple mb-2">Auto Clickers</h3>
-        <div className="grid grid-cols-3 md:grid-cols-5 gap-2 mb-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
           {autoClickers.map(upg => (
             <UpgradeButton
               key={upg.id}
@@ -55,20 +54,18 @@ function UpgradeButton({ upg, points, onBuy }: { upg: Upgrade; points: number; o
       disabled={!canAfford}
       title={`${upg.name}: ${upg.description} (Cost: ${cost})`}
       className={`
-        w-full aspect-square rounded-md flex flex-col justify-between items-center text-[8px] md:text-[10px] font-bold transition-all
-        p-2
-        ${upg.owned > 0
-          ? 'bg-neon-green text-background neon-border border-2'
-          : canAfford
-            ? 'bg-card border-2 border-neon-yellow text-neon-yellow hover:scale-105 cursor-pointer'
-            : 'bg-muted border-2 border-muted-foreground text-muted-foreground cursor-not-allowed'}
+        w-full min-h-[60px] flex flex-col justify-between p-2 rounded-md font-bold text-[8px] md:text-[10px] transition-all
+        text-left
+        ${canAfford
+          ? 'bg-card border-2 border-neon-yellow text-neon-yellow hover:scale-105 hover:shadow-lg cursor-pointer'
+          : 'bg-muted border-2 border-muted-foreground text-muted-foreground cursor-not-allowed'}
       `}
     >
-      <span className="text-center truncate">{upg.name}</span>
-      {!upg.owned ? (
-        <span className="text-[6px] md:text-[8px] text-center">Cost: {cost}</span>
+      <span className="truncate font-semibold">{upg.name}</span>
+      {upg.owned > 0 ? (
+        <span className="text-[6px] md:text-[8px]">Owned: {upg.owned}</span>
       ) : (
-        <span className="text-[6px] md:text-[8px] text-center">{upg.owned} owned</span>
+        <span className="text-[6px] md:text-[8px]">Cost: {cost}</span>
       )}
     </button>
   );
