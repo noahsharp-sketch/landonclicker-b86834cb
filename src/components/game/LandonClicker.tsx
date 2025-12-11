@@ -11,15 +11,28 @@ export function LandonClicker() {
     handleClick,
     buyUpgrade,
     buySkillNode,
+    buyAscensionNode,
     prestige,
+    ascend,
     setFormula,
     saveGame,
     resetGame,
     getUpgradeCost,
     calculatePrestigeGain,
+    calculateAscensionGain,
   } = useGameState();
 
-  const { playClick, playPurchase, playPrestige } = useSound();
+  const { 
+    playClick, 
+    playPurchase, 
+    playPrestige, 
+    playAscension,
+    playAchievement,
+    settings,
+    setVolume,
+    setSfxEnabled,
+    setMusicEnabled,
+  } = useSound();
 
   return (
     <div className="min-h-screen flex flex-col bg-background crt-overlay">
@@ -28,6 +41,12 @@ export function LandonClicker() {
         cps={gameState.cps}
         lifetimeClicks={gameState.lifetimeClicks}
         clickPower={gameState.clickPower}
+        achievements={gameState.achievements}
+        audioSettings={settings}
+        onVolumeChange={setVolume}
+        onSfxToggle={setSfxEnabled}
+        onMusicToggle={setMusicEnabled}
+        playAchievement={playAchievement}
       />
 
       <main className="flex-1 flex flex-col md:flex-row">
@@ -56,12 +75,16 @@ export function LandonClicker() {
       <PrestigePanel
         gameState={gameState}
         calculatePrestigeGain={calculatePrestigeGain}
+        calculateAscensionGain={calculateAscensionGain}
         onPrestige={prestige}
+        onAscend={ascend}
         onBuySkillNode={buySkillNode}
+        onBuyAscensionNode={buyAscensionNode}
         onSetFormula={setFormula}
         onSave={saveGame}
         onReset={resetGame}
         playPrestige={playPrestige}
+        playAscension={playAscension}
         playPurchase={playPurchase}
       />
     </div>
