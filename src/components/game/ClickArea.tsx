@@ -70,7 +70,7 @@ export function ClickArea({ clickPower, onClickAction, playClick }: ClickAreaPro
     <div className="flex flex-col items-center justify-center p-4 md:p-8">
       <button
         onClick={handleClick}
-        className={`relative w-48 h-48 md:w-74 md:h-74 rounded-full overflow-hidden border-4 border-primary neon-border 
+        className={`relative w-48 h-48 md:w-69 md:h-69 rounded-full overflow-hidden border-4 border-primary neon-border 
           transition-transform cursor-pointer select-none pulse-glow
           ${isClicking ? 'click-bounce' : 'hover:scale-105'}`}
         aria-label="Click Landon"
