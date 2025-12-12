@@ -349,8 +349,35 @@ const initialAscensionTree: AscensionNode[] = [
   { id: 'asc3', name: 'Ultimate Clicker', description: '3.5x auto-clickers', cost: 5, owned: false, effect: 3.5, type: 'ultimateCPS' },
 ];
 
+// ----------------- Tiered Achievements -----------------
 function createInitialAchievements(): Achievement[] {
   return [
+    // Tier 1: Beginner
     { id: 'first_click', name: 'First Click', description: 'Click for the first time', icon: '👆', unlocked: false, condition: s => s.lifetimeClicks >= 1 },
+    { id: 'click_100', name: 'Getting Started', description: 'Reach 100 lifetime clicks', icon: '✋', unlocked: false, condition: s => s.lifetimeClicks >= 100 },
+    { id: 'first_upgrade', name: 'First Purchase', description: 'Buy your first upgrade', icon: '🛠️', unlocked: false, condition: s => s.upgrades.some(u => u.owned >= 1) },
+    { id: 'play_1_min', name: 'Getting Warmed Up', description: 'Play for 1 minute', icon: '⏱️', unlocked: false, condition: s => s.stats.totalPlaytime >= 60 },
+
+    // Tier 2: Intermediate
+    { id: 'click_1000', name: 'Clicker Apprentice', description: 'Reach 1,000 lifetime clicks', icon: '🖐️', unlocked: false, condition: s => s.lifetimeClicks >= 1000 },
+    { id: 'upgrade_10', name: 'Collector', description: 'Own 10 upgrades', icon: '📦', unlocked: false, condition: s => s.upgrades.reduce((sum, u) => sum + u.owned, 0) >= 10 },
+    { id: 'prestige_1', name: 'Prestige Initiate', description: 'Prestige for the first time', icon: '🏅', unlocked: false, condition: s => s.totalPrestigePoints >= 1 },
+    { id: 'power_50', name: 'Powerful Clicks', description: 'Reach 50 click power', icon: '💪', unlocked: false, condition: s => s.clickPower >= 50 },
+    { id: 'cps_10', name: 'Automated', description: 'Reach 10 CPS', icon: '🤖', unlocked: false, condition: s => s.cps >= 10 },
+    { id: 'play_10_min', name: 'Committed Clicker', description: 'Play for 10 minutes', icon: '🕙', unlocked: false, condition: s => s.stats.totalPlaytime >= 600 },
+
+    // Tier 3: Advanced
+    { id: 'click_10000', name: 'Clicking Pro', description: 'Reach 10,000 lifetime clicks', icon: '🤚', unlocked: false, condition: s => s.lifetimeClicks >= 10000 },
+    { id: 'upgrade_25', name: 'Super Collector', description: 'Own 25 upgrades', icon: '📦✨', unlocked: false, condition: s => s.upgrades.reduce((sum, u) => sum + u.owned, 0) >= 25 },
+    { id: 'prestige_10', name: 'Prestige Veteran', description: 'Accumulate 10 total prestige points', icon: '🎖️', unlocked: false, condition: s => s.totalPrestigePoints >= 10 },
+    { id: 'ascend_1', name: 'Ascendant', description: 'Ascend for the first time', icon: '🌟', unlocked: false, condition: s => s.totalAscensionPoints >= 1 },
+    { id: 'power_200', name: 'Super Clicker', description: 'Reach 200 click power', icon: '💪⚡', unlocked: false, condition: s => s.clickPower >= 200 },
+    { id: 'cps_50', name: 'Autoclicker Commander', description: 'Reach 50 CPS', icon: '🤖⚡', unlocked: false, condition: s => s.cps >= 50 },
+    { id: 'click_100000', name: 'Click Master', description: 'Reach 100,000 lifetime clicks', icon: '🖐️✨', unlocked: false, condition: s => s.lifetimeClicks >= 100000 },
+    { id: 'upgrade_50', name: 'Ultimate Collector', description: 'Own 50 upgrades', icon: '📦🌟', unlocked: false, condition: s => s.upgrades.reduce((sum, u) => sum + u.owned, 0) >= 50 },
+    { id: 'prestige_50', name: 'Prestige Legend', description: 'Accumulate 50 total prestige points', icon: '🏆', unlocked: false, condition: s => s.totalPrestigePoints >= 50 },
+    { id: 'ascend_5', name: 'Ascension Expert', description: 'Accumulate 5 total ascension points', icon: '🌠', unlocked: false, condition: s => s.totalAscensionPoints >= 5 },
+    { id: 'power_1000', name: 'Click Overlord', description: 'Reach 1,000 click power', icon: '💪🔥', unlocked: false, condition: s => s.clickPower >= 1000 },
+    { id: 'cps_200', name: 'Autoclicker Overlord', description: 'Reach 200 CPS', icon: '🤖🔥', unlocked: false, condition: s => s.cps >= 200 },
   ];
 }
