@@ -4,9 +4,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
-import LandonClicker from "@/components/game/LandonClicker";
-import PrestigePanel from "@/components/game/PrestigePanel";
-import UpgradesPanel from "@/components/game/UpgradesPanel";
+import {LandonClicker} from "@/components/game/LandonClicker";
+import {PrestigePanel} from "@/components/game/PrestigePanel";
+import {UpgradesPanel} from "@/components/game/UpgradesPanel";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
