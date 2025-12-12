@@ -20,7 +20,6 @@ export default function PrestigePanel({
   onSave,
   onReset,
 }: PrestigePanelProps) {
-
   return (
     <div className="bg-card p-4 border-t-2 border-primary neon-border">
       <h2 className="text-xl font-bold mb-2">Prestige</h2>
