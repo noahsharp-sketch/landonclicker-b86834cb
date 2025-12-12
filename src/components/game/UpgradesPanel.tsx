@@ -1,39 +1,46 @@
+import React from 'react';
 import type { GameState, Upgrade } from '@/hooks/useGameState';
-import { Zap, Heart } from 'lucide-react';
 
 interface UpgradesPanelProps {
   gameState: GameState;
-  onBuyUpgrade: (id: string) => void;
-  playPurchase: () => void;
+  buyUpgrade: (id: string) => void;
+  getUpgradeCost: (upgrade: Upgrade) => number;
 }
 
-export function UpgradesPanel({ gameState, onBuyUpgrade, playPurchase }: UpgradesPanelProps) {
+export function UpgradesPanel({ gameState, buyUpgrade, getUpgradeCost }: UpgradesPanelProps) {
   const clickUpgrades = gameState.upgrades.filter(u => u.type === 'clickPower');
-  const autoClickers = gameState.upgrades.filter(u => u.type === 'autoClicker');
-
-  const handleBuy = (id: string) => {
-    onBuyUpgrade(id);
-    playPurchase();
-  };
+  const autoUpgrades = gameState.upgrades.filter(u => u.type === 'autoClicker');
 
   return (
-    <div className="p-4 space-y-6 overflow-y-auto max-h-[50vh] md:max-h-full">
-      {/* Click Power Upgrades */}
+    <div className="bg-card border-t-2 border-primary neon-border p-4 space-y-6">
+      {/* Click Upgrades */}
       <div>
-        <h3 className="text-sm md:text-base font-bold text-neon-yellow mb-2 font-retro">⚡ Upgrades</h3>
-        <div className="flex flex-col space-y-3">
-          {clickUpgrades.map(upg => (
-            <UpgradeListItem key={upg.id} upg={upg} points={gameState.clicks} onBuy={() => handleBuy(upg.id)} />
+        <h3 className="text-neon-yellow text-sm mb-2">Click Upgrades</h3>
+        <div className="flex flex-col gap-2">
+          {clickUpgrades.map(u => (
+            <UpgradeButton
+              key={u.id}
+              upgrade={u}
+              affordable={gameState.clicks >= getUpgradeCost(u)}
+              cost={getUpgradeCost(u)}
+              onClick={() => buyUpgrade(u.id)}
+            />
           ))}
         </div>
       </div>
 
-      {/* Auto Clickers */}
+      {/* Auto-clickers */}
       <div>
-        <h3 className="text-sm md:text-base font-bold text-neon-purple mb-2 font-retro">💜 Auto Clickers</h3>
-        <div className="flex flex-col space-y-3">
-          {autoClickers.map(upg => (
-            <UpgradeListItem key={upg.id} upg={upg} points={gameState.clicks} onBuy={() => handleBuy(upg.id)} />
+        <h3 className="text-neon-purple text-sm mb-2">Auto Clickers</h3>
+        <div className="flex flex-col gap-2">
+          {autoUpgrades.map(u => (
+            <UpgradeButton
+              key={u.id}
+              upgrade={u}
+              affordable={gameState.clicks >= getUpgradeCost(u)}
+              cost={getUpgradeCost(u)}
+              onClick={() => buyUpgrade(u.id)}
+            />
           ))}
         </div>
       </div>
@@ -41,32 +48,25 @@ export function UpgradesPanel({ gameState, onBuyUpgrade, playPurchase }: Upgrade
   );
 }
 
-function UpgradeListItem({ upg, points, onBuy }: { upg: Upgrade; points: number; onBuy: () => void }) {
-  const cost = Math.floor(upg.baseCost * Math.pow(upg.costMultiplier, upg.owned));
-  const canAfford = points >= cost;
+// ---------------- Upgrade Button ----------------
 
-  const icon = upg.type === 'clickPower' 
-    ? <Zap className="text-neon-yellow w-5 h-5" /> 
-    : <Heart className="text-neon-pink w-5 h-5" />;
+interface UpgradeButtonProps {
+  upgrade: Upgrade;
+  affordable: boolean;
+  cost: number;
+  onClick: () => void;
+}
 
+function UpgradeButton({ upgrade, affordable, cost, onClick }: UpgradeButtonProps) {
   return (
     <button
-      onClick={onBuy}
-      disabled={!canAfford}
-      className={`
-        flex items-center justify-between p-3 rounded-lg font-bold transition-all
-        bg-card border border-border
-        ${canAfford ? 'hover:scale-105 hover:border-primary neon-border cursor-pointer' : 'opacity-60 cursor-not-allowed'}
-      `}
+      onClick={onClick}
+      disabled={!affordable}
+      className={`flex justify-between items-center px-3 py-2 rounded-lg text-sm font-bold transition-all
+        ${upgrade.owned > 0 ? 'bg-gray-700 text-gray-300' : affordable ? 'bg-yellow-400 text-black hover:scale-105 glow' : 'bg-muted text-muted-foreground cursor-not-allowed'}`}
     >
-      <div className="flex items-center gap-3">
-        {icon}
-        <div className="flex flex-col text-left">
-          <span className="text-foreground text-sm">{upg.name}</span>
-          <span className="text-xs text-muted-foreground">Owned: {upg.owned} • Cost: {Math.floor(cost)}</span>
-        </div>
-      </div>
-      {canAfford && <span className="w-2 h-2 bg-neon-cyan rounded-full animate-pulse"></span>}
+      <span>{upgrade.name} {upgrade.owned > 0 && `(${upgrade.owned})`}</span>
+      <span className="text-xs font-bold">{cost} 💎</span>
     </button>
   );
 }
