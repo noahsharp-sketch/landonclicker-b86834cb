@@ -1,8 +1,8 @@
 import React from 'react';
-import { GameState } from '@/hooks/useGameState';
+import { useGameState } from '@/hooks/useGameState';
 
 interface PrestigePanelProps {
-  gameState: GameState;
+  gameState: ReturnType<typeof useGameState>['gameState'];
   onPrestige: () => void;
   onAscend: () => void;
   onBuySkillNode: (id: string) => void;
@@ -20,77 +20,78 @@ export default function PrestigePanel({
   onSave,
   onReset,
 }: PrestigePanelProps) {
-  return (
-    <div className="p-4 flex flex-col md:flex-row gap-4 bg-card border-t-2 border-primary">
-      {/* Prestige */}
-      <div className="flex-1 flex flex-col gap-2">
-        <h2 className="font-bold text-lg">Prestige</h2>
-        <button
-          className={`w-full p-3 rounded-lg border-2 border-purple-400 bg-purple-200
-                      hover:bg-purple-300 hover:shadow-lg font-bold transition-all`}
-          onClick={onPrestige}
-        >
-          Prestige (+{Math.floor(gameState.lifetimeClicks / 1_000_000)} points)
-        </button>
+  const prestigeGain = Math.floor(gameState.lifetimeClicks / 1_000_000);
+  const ascensionGain = Math.floor(Math.sqrt(gameState.totalPrestigePoints / 100));
 
-        {gameState.skillTree.map(skill => (
+  return (
+    <div className="bg-card p-4 border-t-2 border-primary neon-border">
+      <h2 className="text-xl font-bold mb-2">Prestige & Ascension</h2>
+
+      <div className="mb-4">
+        <button
+          onClick={onPrestige}
+          className="w-full py-2 mb-2 rounded-md border-2 border-yellow-400 bg-yellow-300 hover:bg-yellow-400 transition"
+        >
+          Prestige (+{prestigeGain} points)
+        </button>
+        <button
+          onClick={onAscend}
+          className="w-full py-2 mb-2 rounded-md border-2 border-blue-400 bg-blue-300 hover:bg-blue-400 transition"
+        >
+          Ascend (+{ascensionGain} points)
+        </button>
+      </div>
+
+      <div className="mb-4">
+        <h3 className="font-semibold mb-2">Prestige Upgrades</h3>
+        {gameState.skillTree.map(node => (
           <button
-            key={skill.id}
-            className={`
-              w-full p-2 rounded-lg border-2 border-purple-400
-              bg-purple-200 hover:bg-purple-300 hover:shadow-lg
-              transition-all font-bold text-left
-              ${skill.owned ? 'opacity-50 cursor-not-allowed' : ''}
-            `}
-            onClick={() => {
-              if (!skill.owned) onBuySkillNode(skill.id);
-            }}
+            key={node.id}
+            disabled={node.owned || gameState.prestigePoints < node.cost}
+            onClick={() => onBuySkillNode(node.id)}
+            className={`w-full text-left px-2 py-1 mb-1 rounded-md border-2 ${
+              node.owned
+                ? 'border-gray-400 bg-gray-300 text-gray-600 cursor-not-allowed'
+                : 'border-yellow-500 bg-yellow-200 hover:bg-yellow-300'
+            } transition`}
           >
-            {skill.name} - {skill.description}
+            <div className="font-bold">{node.name}</div>
+            <div className="text-sm">{node.description}</div>
+            <div className="text-xs">Cost: {node.cost} prestige points</div>
           </button>
         ))}
       </div>
 
-      {/* Ascension */}
-      <div className="flex-1 flex flex-col gap-2">
-        <h2 className="font-bold text-lg">Ascension</h2>
-        <button
-          className={`w-full p-3 rounded-lg border-2 border-indigo-400 bg-indigo-200
-                      hover:bg-indigo-300 hover:shadow-lg font-bold transition-all`}
-          onClick={onAscend}
-        >
-          Ascend (+{Math.floor(Math.sqrt(gameState.totalPrestigePoints / 100))} points)
-        </button>
-
+      <div className="mb-4">
+        <h3 className="font-semibold mb-2">Ascension Upgrades</h3>
         {gameState.ascensionTree.map(node => (
           <button
             key={node.id}
-            className={`
-              w-full p-2 rounded-lg border-2 border-indigo-400
-              bg-indigo-200 hover:bg-indigo-300 hover:shadow-lg
-              transition-all font-bold text-left
-              ${node.owned ? 'opacity-50 cursor-not-allowed' : ''}
-            `}
-            onClick={() => {
-              if (!node.owned) onBuyAscensionNode(node.id);
-            }}
+            disabled={node.owned || gameState.ascensionPoints < node.cost}
+            onClick={() => onBuyAscensionNode(node.id)}
+            className={`w-full text-left px-2 py-1 mb-1 rounded-md border-2 ${
+              node.owned
+                ? 'border-gray-400 bg-gray-300 text-gray-600 cursor-not-allowed'
+                : 'border-blue-500 bg-blue-200 hover:bg-blue-300'
+            } transition`}
           >
-            {node.name} - {node.description}
+            <div className="font-bold">{node.name}</div>
+            <div className="text-sm">{node.description}</div>
+            <div className="text-xs">Cost: {node.cost} ascension points</div>
           </button>
         ))}
       </div>
 
-      {/* Save / Reset */}
-      <div className="flex flex-col gap-2 md:w-48">
+      <div className="flex gap-2">
         <button
-          className="w-full p-2 rounded-lg border-2 border-green-400 bg-green-200 hover:bg-green-300 hover:shadow-lg font-bold transition-all"
           onClick={onSave}
+          className="flex-1 py-2 rounded-md border-2 border-green-400 bg-green-200 hover:bg-green-300 transition"
         >
           Save
         </button>
         <button
-          className="w-full p-2 rounded-lg border-2 border-red-400 bg-red-200 hover:bg-red-300 hover:shadow-lg font-bold transition-all"
           onClick={onReset}
+          className="flex-1 py-2 rounded-md border-2 border-red-400 bg-red-200 hover:bg-red-300 transition"
         >
           Reset
         </button>

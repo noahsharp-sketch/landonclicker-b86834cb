@@ -6,7 +6,7 @@ import UpgradesPanel from './UpgradesPanel';
 import PrestigePanel from './PrestigePanel';
 import { StatisticsPanel } from './StatisticsPanel';
 
-export default function LandonClicker() {  // <-- default export now
+export function LandonClicker() {
   const {
     gameState,
     handleClick,
