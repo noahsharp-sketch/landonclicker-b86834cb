@@ -1,4 +1,4 @@
-import { Quest, Challenge, QuestStep } from '../types/types';
+import { Quest, Challenge, SpecialEvent } from '../types/types';
 
 export function createInitialQuests(): Quest[] {
   return [
@@ -185,11 +185,113 @@ export function createWeeklyChallenges(): Challenge[] {
   ];
 }
 
+// Generate rotating special events
+export function generateSpecialEvents(): SpecialEvent[] {
+  const now = Date.now();
+  const hourMs = 60 * 60 * 1000;
+  
+  // Events rotate every few hours for demo purposes (in production would be days)
+  const eventPool: Omit<SpecialEvent, 'startsAt' | 'endsAt' | 'active'>[] = [
+    {
+      id: 'gold_rush',
+      name: '💰 Gold Rush',
+      description: '2x clicks for a limited time! Complete challenges for massive rewards.',
+      icon: '💰',
+      theme: 'gold',
+      multipliers: { clicks: 2 },
+      challenges: [
+        { id: 'gr1', description: 'Earn 100,000 clicks', target: 100000, current: 0, completed: false, type: 'clicks' },
+        { id: 'gr2', description: 'Buy 20 upgrades', target: 20, current: 0, completed: false, type: 'upgrades' },
+      ],
+      rewards: { clicks: 500000, prestigePoints: 5 },
+      completed: false,
+      claimed: false,
+    },
+    {
+      id: 'cosmic_surge',
+      name: '🌌 Cosmic Surge',
+      description: '3x CPS boost! Automate your way to victory.',
+      icon: '🌌',
+      theme: 'cosmic',
+      multipliers: { cps: 3 },
+      challenges: [
+        { id: 'cs1', description: 'Reach 500 CPS', target: 500, current: 0, completed: false, type: 'cps' },
+        { id: 'cs2', description: 'Earn 500,000 lifetime clicks', target: 500000, current: 0, completed: false, type: 'lifetimeClicks' },
+      ],
+      rewards: { clicks: 250000, prestigePoints: 3, ascensionPoints: 1 },
+      completed: false,
+      claimed: false,
+    },
+    {
+      id: 'speed_demon',
+      name: '⚡ Speed Demon',
+      description: '2x CPS and clicks! The ultimate combo event.',
+      icon: '⚡',
+      theme: 'speed',
+      multipliers: { clicks: 1.5, cps: 2 },
+      challenges: [
+        { id: 'sd1', description: 'Reach 1000 CPS', target: 1000, current: 0, completed: false, type: 'cps' },
+        { id: 'sd2', description: 'Prestige 2 times', target: 2, current: 0, completed: false, type: 'prestiges' },
+      ],
+      rewards: { prestigePoints: 8, ascensionPoints: 2 },
+      completed: false,
+      claimed: false,
+    },
+    {
+      id: 'power_hour',
+      name: '💪 Power Hour',
+      description: 'Enhanced prestige gains! Perfect time to reset.',
+      icon: '💪',
+      theme: 'power',
+      multipliers: { prestigeGain: 2 },
+      challenges: [
+        { id: 'ph1', description: 'Prestige 3 times', target: 3, current: 0, completed: false, type: 'prestiges' },
+        { id: 'ph2', description: 'Earn 1,000,000 lifetime clicks', target: 1000000, current: 0, completed: false, type: 'lifetimeClicks' },
+      ],
+      rewards: { prestigePoints: 10, ascensionPoints: 3 },
+      completed: false,
+      claimed: false,
+    },
+    {
+      id: 'lucky_day',
+      name: '🍀 Lucky Day',
+      description: 'Everything is boosted! Don\'t miss this rare event.',
+      icon: '🍀',
+      theme: 'lucky',
+      multipliers: { clicks: 1.5, cps: 1.5, prestigeGain: 1.5 },
+      challenges: [
+        { id: 'ld1', description: 'Earn 200,000 clicks', target: 200000, current: 0, completed: false, type: 'clicks' },
+        { id: 'ld2', description: 'Buy 30 upgrades', target: 30, current: 0, completed: false, type: 'upgrades' },
+        { id: 'ld3', description: 'Reach 300 CPS', target: 300, current: 0, completed: false, type: 'cps' },
+      ],
+      rewards: { clicks: 1000000, prestigePoints: 10, ascensionPoints: 2 },
+      completed: false,
+      claimed: false,
+    },
+  ];
+
+  // Pick a random event and make it active
+  const randomIndex = Math.floor((now / (hourMs * 4)) % eventPool.length);
+  const activeEvent = eventPool[randomIndex];
+  
+  // Event lasts 4 hours
+  const eventStart = Math.floor(now / (hourMs * 4)) * (hourMs * 4);
+  const eventEnd = eventStart + (hourMs * 4);
+
+  return [{
+    ...activeEvent,
+    startsAt: eventStart,
+    endsAt: eventEnd,
+    active: now >= eventStart && now < eventEnd,
+  }];
+}
+
 export function createInitialQuestState() {
   return {
     quests: createInitialQuests(),
     challenges: [...createDailyChallenges(), ...createWeeklyChallenges()],
     leaderboard: [],
+    events: generateSpecialEvents(),
     lastDailyReset: Date.now(),
     lastWeeklyReset: Date.now(),
   };

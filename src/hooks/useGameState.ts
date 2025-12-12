@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { initialUpgrades, initialSkillTree, initialAscensionTree, createInitialAchievements } from '../data/gameData';
-import { createInitialQuestState, createDailyChallenges, createWeeklyChallenges } from '../data/questData';
+import { createInitialQuestState, createDailyChallenges, createWeeklyChallenges, generateSpecialEvents } from '../data/questData';
 import { calculateClickPower, calculateCPS, calculatePrestigeGain, calculateAscensionGain } from '../utils/calculations';
 import { buyUpgrade as buyUpgradeAction } from '../utils/actions';
-import { GameState, LeaderboardEntry } from '../types/types';
+import { GameState, LeaderboardEntry, SpecialEvent } from '../types/types';
 
 const STORAGE_KEY = 'landon-clicker-save';
 
@@ -137,6 +137,7 @@ export function useGameState() {
           quests: mergeArrayById(parsed.questState?.quests || [], fresh.questState.quests),
           challenges: parsed.questState?.challenges || fresh.questState.challenges,
           leaderboard: parsed.questState?.leaderboard || [],
+          events: generateSpecialEvents(), // Always regenerate events based on current time
         },
       };
       
@@ -172,16 +173,28 @@ export function useGameState() {
     }
   }, []);
 
+  /* ---------- Get active event multipliers ---------- */
+  const getEventMultipliers = useCallback((state: GameState) => {
+    const activeEvent = state.questState.events.find(e => e.active && !e.claimed);
+    return activeEvent?.multipliers || {};
+  }, []);
+
   /* ---------- Game Actions ---------- */
 
   const handleClick = useCallback(() => {
-    setGameState(prev => ({
-      ...prev,
-      clicks: prev.clicks + prev.clickPower,
-      lifetimeClicks: prev.lifetimeClicks + prev.clickPower,
-      stats: { ...prev.stats, totalClicks: prev.stats.totalClicks + 1 },
-    }));
-  }, []);
+    setGameState(prev => {
+      const multipliers = getEventMultipliers(prev);
+      const clickMultiplier = multipliers.clicks || 1;
+      const effectiveClick = prev.clickPower * clickMultiplier;
+      
+      return {
+        ...prev,
+        clicks: prev.clicks + effectiveClick,
+        lifetimeClicks: prev.lifetimeClicks + effectiveClick,
+        stats: { ...prev.stats, totalClicks: prev.stats.totalClicks + 1 },
+      };
+    });
+  }, [getEventMultipliers]);
 
   const buyUpgrade = useCallback((id: string) => {
     setGameState(prev => buyUpgradeAction(prev, id));
@@ -216,7 +229,9 @@ export function useGameState() {
 
   const prestige = useCallback(() => {
     setGameState(prev => {
-      const gain = calculatePrestigeGain(prev);
+      const multipliers = getEventMultipliers(prev);
+      const prestigeMultiplier = multipliers.prestigeGain || 1;
+      const gain = Math.floor(calculatePrestigeGain(prev) * prestigeMultiplier);
       if (gain <= 0) return prev;
       
       const startingClicks = getStartingClicks(prev);
@@ -233,7 +248,7 @@ export function useGameState() {
       };
       return { ...newState, clickPower: calculateClickPower(newState), cps: calculateCPS(newState) };
     });
-  }, [getStartingClicks]);
+  }, [getStartingClicks, getEventMultipliers]);
 
   const ascend = useCallback(() => {
     setGameState(prev => {
@@ -322,6 +337,25 @@ export function useGameState() {
     });
   }, []);
 
+  const claimEventReward = useCallback((eventId: string) => {
+    setGameState(prev => {
+      const event = prev.questState.events.find(e => e.id === eventId);
+      if (!event || !event.challenges.every(c => c.completed) || event.claimed) return prev;
+
+      const newEvents = prev.questState.events.map(e => 
+        e.id === eventId ? { ...e, completed: true, claimed: true } : e
+      );
+
+      return {
+        ...prev,
+        clicks: prev.clicks + (event.rewards.clicks || 0),
+        prestigePoints: prev.prestigePoints + (event.rewards.prestigePoints || 0),
+        ascensionPoints: prev.ascensionPoints + (event.rewards.ascensionPoints || 0),
+        questState: { ...prev.questState, events: newEvents },
+      };
+    });
+  }, []);
+
   const resetGame = useCallback(() => {
     if (confirm('Are you sure you want to reset all progress?')) {
       localStorage.removeItem(STORAGE_KEY);
@@ -383,14 +417,38 @@ export function useGameState() {
         return { ...challenge, current, completed };
       });
 
+      // Update event challenges
+      const newEvents = prev.questState.events.map(event => {
+        if (!event.active || event.claimed) return event;
+
+        const updatedChallenges = event.challenges.map(challenge => {
+          if (challenge.completed) return challenge;
+
+          let current = 0;
+          switch (challenge.type) {
+            case 'clicks': current = prev.clicks; break;
+            case 'lifetimeClicks': current = prev.lifetimeClicks; break;
+            case 'cps': current = prev.cps; break;
+            case 'upgrades': current = totalUpgrades; break;
+            case 'prestiges': current = prev.totalPrestiges; break;
+          }
+
+          const completed = current >= challenge.target;
+          return { ...challenge, current, completed };
+        });
+
+        return { ...event, challenges: updatedChallenges };
+      });
+
       const questsChanged = JSON.stringify(newQuests) !== JSON.stringify(prev.questState.quests);
       const challengesChanged = JSON.stringify(newChallenges) !== JSON.stringify(prev.questState.challenges);
+      const eventsChanged = JSON.stringify(newEvents) !== JSON.stringify(prev.questState.events);
 
-      if (!questsChanged && !challengesChanged) return prev;
+      if (!questsChanged && !challengesChanged && !eventsChanged) return prev;
 
       return {
         ...prev,
-        questState: { ...prev.questState, quests: newQuests, challenges: newChallenges },
+        questState: { ...prev.questState, quests: newQuests, challenges: newChallenges, events: newEvents },
       };
     });
   }, [gameState.clicks, gameState.lifetimeClicks, gameState.cps, gameState.totalPrestiges, gameState.clickPower, gameState.upgrades]);
@@ -474,5 +532,6 @@ export function useGameState() {
     claimQuestReward,
     claimChallengeReward,
     addLeaderboardScore,
+    claimEventReward,
   };
 }

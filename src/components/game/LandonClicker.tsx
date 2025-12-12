@@ -21,6 +21,7 @@ export function LandonClicker() {
     claimQuestReward,
     claimChallengeReward,
     addLeaderboardScore,
+    claimEventReward,
   } = useGameState();
 
   const { 
@@ -35,6 +36,9 @@ export function LandonClicker() {
     setMusicEnabled,
   } = useSound();
 
+  // Check for active event multipliers to show indicator
+  const activeEvent = gameState.questState.events.find(e => e.active && !e.claimed);
+
   return (
     <div className="min-h-screen flex flex-col bg-background crt-overlay">
       {/* Offline Earnings Notification */}
@@ -44,6 +48,18 @@ export function LandonClicker() {
             <p className="text-neon-cyan font-bold text-sm">Welcome back!</p>
             <p className="text-foreground text-xs">You earned {formatNumber(offlineEarnings)} clicks while away!</p>
           </div>
+        </div>
+      )}
+
+      {/* Active Event Indicator */}
+      {activeEvent && (
+        <div className="bg-gradient-to-r from-neon-yellow/20 via-neon-purple/20 to-neon-cyan/20 border-b border-neon-yellow/50 py-1 text-center">
+          <span className="text-xs font-bold animate-pulse">
+            {activeEvent.icon} {activeEvent.name} Active! 
+            {activeEvent.multipliers.clicks && ` ${activeEvent.multipliers.clicks}x Clicks`}
+            {activeEvent.multipliers.cps && ` ${activeEvent.multipliers.cps}x CPS`}
+            {activeEvent.multipliers.prestigeGain && ` ${activeEvent.multipliers.prestigeGain}x Prestige`}
+          </span>
         </div>
       )}
 
@@ -63,6 +79,7 @@ export function LandonClicker() {
         onClaimQuestReward={claimQuestReward}
         onClaimChallengeReward={claimChallengeReward}
         onAddLeaderboardScore={addLeaderboardScore}
+        onClaimEventReward={claimEventReward}
       />
 
       <main className="flex-1 flex flex-col md:flex-row">
