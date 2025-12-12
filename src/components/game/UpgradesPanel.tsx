@@ -1,4 +1,5 @@
-import type { GameState, Upgrade } from '@/hooks/useGameState';
+import type { GameState, Upgrade } from '@/types/types';
+import { getUpgradeCost } from '@/utils/calculations';
 import { Zap, Heart } from 'lucide-react';
 
 interface UpgradesPanelProps {
@@ -23,7 +24,13 @@ export function UpgradesPanel({ gameState, onBuyUpgrade, playPurchase }: Upgrade
         <h3 className="text-sm md:text-base font-bold text-neon-yellow mb-2 font-retro">⚡ Upgrades</h3>
         <div className="flex flex-col space-y-3">
           {clickUpgrades.map(upg => (
-            <UpgradeListItem key={upg.id} upg={upg} points={gameState.clicks} onBuy={() => handleBuy(upg.id)} />
+            <UpgradeListItem 
+              key={upg.id} 
+              upg={upg} 
+              cost={getUpgradeCost(gameState, upg.id)}
+              points={gameState.clicks} 
+              onBuy={() => handleBuy(upg.id)} 
+            />
           ))}
         </div>
       </div>
@@ -33,7 +40,13 @@ export function UpgradesPanel({ gameState, onBuyUpgrade, playPurchase }: Upgrade
         <h3 className="text-sm md:text-base font-bold text-neon-purple mb-2 font-retro">💜 Auto Clickers</h3>
         <div className="flex flex-col space-y-3">
           {autoClickers.map(upg => (
-            <UpgradeListItem key={upg.id} upg={upg} points={gameState.clicks} onBuy={() => handleBuy(upg.id)} />
+            <UpgradeListItem 
+              key={upg.id} 
+              upg={upg} 
+              cost={getUpgradeCost(gameState, upg.id)}
+              points={gameState.clicks} 
+              onBuy={() => handleBuy(upg.id)} 
+            />
           ))}
         </div>
       </div>
@@ -41,8 +54,7 @@ export function UpgradesPanel({ gameState, onBuyUpgrade, playPurchase }: Upgrade
   );
 }
 
-function UpgradeListItem({ upg, points, onBuy }: { upg: Upgrade; points: number; onBuy: () => void }) {
-  const cost = Math.floor(upg.baseCost * Math.pow(upg.costMultiplier, upg.owned));
+function UpgradeListItem({ upg, cost, points, onBuy }: { upg: Upgrade; cost: number; points: number; onBuy: () => void }) {
   const canAfford = points >= cost;
 
   const icon = upg.type === 'clickPower' 

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Trophy, X } from 'lucide-react';
-import type { Achievement } from '@/hooks/useGameState';
+import type { Achievement } from '@/types/types';
 
 interface AchievementsPanelProps {
   achievements: Achievement[];
