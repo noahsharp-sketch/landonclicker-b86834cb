@@ -1,84 +1,121 @@
-import type { GameState, Upgrade } from '@/types/types';
-import { getUpgradeCost } from '@/utils/calculations';
-import { Zap, Heart } from 'lucide-react';
+import React, { useState } from "react";
+import { useGameState } from "../hooks/useGameState";
 
-interface UpgradesPanelProps {
-  gameState: GameState;
-  onBuyUpgrade: (id: string) => void;
-  playPurchase: () => void;
-}
+export default function UpgradePanel() {
+  const { gameState, buyUpgrade, getUpgradeCost } = useGameState();
+  const [bulkAmount, setBulkAmount] = useState(1);
 
-export function UpgradesPanel({ gameState, onBuyUpgrade, playPurchase }: UpgradesPanelProps) {
-  const clickUpgrades = gameState.upgrades.filter(u => u.type === 'clickPower');
-  const autoClickers = gameState.upgrades.filter(u => u.type === 'autoClicker');
+  const bulkOptions = [1, 10, 25, 100, "MAX"] as const;
 
-  const handleBuy = (id: string) => {
-    onBuyUpgrade(id);
-    playPurchase();
+  // Calculate total bulk cost
+  const getBulkCost = (upgrade) => {
+    let total = 0;
+    let owned = upgrade.owned;
+
+    if (bulkAmount === "MAX") {
+      let clicks = gameState.clicks;
+      while (clicks >= Math.floor(upgrade.baseCost * Math.pow(upgrade.costMultiplier, owned))) {
+        const nextCost = Math.floor(
+          upgrade.baseCost * Math.pow(upgrade.costMultiplier, owned)
+        );
+        total += nextCost;
+        clicks -= nextCost;
+        owned++;
+      }
+      return total;
+    }
+
+    for (let i = 0; i < bulkAmount; i++) {
+      const cost = Math.floor(
+        upgrade.baseCost * Math.pow(upgrade.costMultiplier, owned)
+      );
+      total += cost;
+      owned++;
+    }
+    return total;
+  };
+
+  const canAfford = (upgrade) => {
+    return gameState.clicks >= getBulkCost(upgrade);
+  };
+
+  const handleBulkBuy = (upgrade) => {
+    if (!canAfford(upgrade)) return;
+
+    if (bulkAmount === "MAX") {
+      // Keep buying until broke
+      while (gameState.clicks >= getUpgradeCost(upgrade)) {
+        buyUpgrade(upgrade.id);
+      }
+      return;
+    }
+
+    for (let i = 0; i < bulkAmount; i++) {
+      if (gameState.clicks >= getUpgradeCost(upgrade)) {
+        buyUpgrade(upgrade.id);
+      }
+    }
   };
 
   return (
-    <div className="p-4 space-y-6 overflow-y-auto max-h-[50vh] md:max-h-full">
-      {/* Click Power Upgrades */}
-      <div>
-        <h3 className="text-sm md:text-base font-bold text-neon-yellow mb-2 font-retro">⚡ Upgrades</h3>
-        <div className="flex flex-col space-y-3">
-          {clickUpgrades.map(upg => (
-            <UpgradeListItem 
-              key={upg.id} 
-              upg={upg} 
-              cost={getUpgradeCost(gameState, upg.id)}
-              points={gameState.clicks} 
-              onBuy={() => handleBuy(upg.id)} 
-            />
-          ))}
-        </div>
+    <div style={{ padding: 20 }}>
+      <h2 className="text-xl font-bold mb-3">Upgrades</h2>
+
+      {/* Bulk Buttons */}
+      <div className="flex gap-2 mb-4">
+        {bulkOptions.map((opt) => (
+          <button
+            key={opt}
+            className={`px-3 py-1 rounded ${
+              bulkAmount === opt
+                ? "bg-blue-600 text-white"
+                : "bg-gray-300 text-black"
+            }`}
+            onClick={() => setBulkAmount(opt)}
+          >
+            {opt}
+          </button>
+        ))}
       </div>
 
-      {/* Auto Clickers */}
-      <div>
-        <h3 className="text-sm md:text-base font-bold text-neon-purple mb-2 font-retro">💜 Auto Clickers</h3>
-        <div className="flex flex-col space-y-3">
-          {autoClickers.map(upg => (
-            <UpgradeListItem 
-              key={upg.id} 
-              upg={upg} 
-              cost={getUpgradeCost(gameState, upg.id)}
-              points={gameState.clicks} 
-              onBuy={() => handleBuy(upg.id)} 
-            />
-          ))}
-        </div>
+      {/* Upgrades List */}
+      <div className="flex flex-col gap-4">
+        {gameState.upgrades.map((upgrade) => {
+          const cost = getBulkCost(upgrade);
+
+          return (
+            <div
+              key={upgrade.id}
+              className="p-3 border rounded bg-gray-100 shadow-sm flex justify-between"
+            >
+              <div>
+                <div className="text-lg font-semibold">{upgrade.name}</div>
+                <div className="text-sm text-gray-600">
+                  {upgrade.description}
+                </div>
+                <div className="text-sm text-gray-800 mt-1">
+                  Owned: {upgrade.owned}
+                </div>
+                <div className="text-sm mt-1">
+                  Bulk Cost: <strong>{Math.floor(cost)}</strong>
+                </div>
+              </div>
+
+              <button
+                onClick={() => handleBulkBuy(upgrade)}
+                disabled={!canAfford(upgrade)}
+                className={`px-4 py-2 rounded font-bold self-center ${
+                  canAfford(upgrade)
+                    ? "bg-green-500 text-white hover:bg-green-600"
+                    : "bg-gray-400 text-gray-700 cursor-not-allowed"
+                }`}
+              >
+                Buy {bulkAmount === "MAX" ? "Max" : `${bulkAmount}×`}
+              </button>
+            </div>
+          );
+        })}
       </div>
     </div>
-  );
-}
-
-function UpgradeListItem({ upg, cost, points, onBuy }: { upg: Upgrade; cost: number; points: number; onBuy: () => void }) {
-  const canAfford = points >= cost;
-
-  const icon = upg.type === 'clickPower' 
-    ? <Zap className="text-neon-yellow w-5 h-5" /> 
-    : <Heart className="text-neon-pink w-5 h-5" />;
-
-  return (
-    <button
-      onClick={onBuy}
-      disabled={!canAfford}
-      className={`
-        flex items-center justify-between p-3 rounded-lg font-bold transition-all
-        bg-card border border-border
-        ${canAfford ? 'hover:scale-105 hover:border-primary neon-border cursor-pointer' : 'opacity-60 cursor-not-allowed'}
-      `}
-    >
-      <div className="flex items-center gap-3">
-        {icon}
-        <div className="flex flex-col text-left">
-          <span className="text-foreground text-sm">{upg.name}</span>
-          <span className="text-xs text-muted-foreground">Owned: {upg.owned} • Cost: {Math.floor(cost)}</span>
-        </div>
-      </div>
-      {canAfford && <span className="w-2 h-2 bg-neon-cyan rounded-full animate-pulse"></span>}
-    </button>
   );
 }
