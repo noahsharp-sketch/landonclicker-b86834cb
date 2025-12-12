@@ -3,17 +3,10 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 /* ---------------- MERGE FIX: ensures new upgrades are added safely ---------------- */
 function mergeArrayById<T extends { id: string }>(saved: T[], fresh: T[]) {
   const map = new Map<string, T>();
-
-  // Add saved entries
   saved.forEach(item => map.set(item.id, item));
-
-  // Add any new entries (or updated defaults)
   fresh.forEach(item => {
-    if (!map.has(item.id)) {
-      map.set(item.id, item);
-    }
+    if (!map.has(item.id)) map.set(item.id, item);
   });
-
   return Array.from(map.values());
 }
 /* ------------------------------------------------------------------------------- */
@@ -113,10 +106,8 @@ export function useGameState() {
     };
   }
 
-  /* ------------ LOAD + MERGE FIX HERE ---------------- */
   const [gameState, setGameState] = useState<GameState>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
-
     if (!saved) return getInitialState();
 
     try {
@@ -129,18 +120,16 @@ export function useGameState() {
         upgrades: mergeArrayById(parsed.upgrades || [], fresh.upgrades),
         skillTree: mergeArrayById(parsed.skillTree || [], fresh.skillTree),
         ascensionTree: mergeArrayById(parsed.ascensionTree || [], fresh.ascensionTree),
-        achievements: mergeArrayById(parsed.achievements || [], fresh.achievements)
+        achievements: mergeArrayById(parsed.achievements || [], fresh.achievements),
       };
     } catch {
       return getInitialState();
     }
   });
-  /* --------------------------------------------------- */
 
   const lastTickRef = useRef(Date.now());
 
   // ----------------- Calculation Functions -----------------
-
   const calculateClickPower = useCallback((state: GameState) => {
     let power = 1;
     state.upgrades.filter(u => u.type === 'clickPower').forEach(u => power += u.effect * u.owned);
@@ -172,7 +161,6 @@ export function useGameState() {
   }, []);
 
   // ----------------- Action Functions -----------------
-
   const buySkillNode = useCallback((id: string) => {
     setGameState(prev => {
       const node = prev.skillTree.find(n => n.id === id);
@@ -182,11 +170,6 @@ export function useGameState() {
       return { ...newState, clickPower: calculateClickPower(newState), cps: calculateCPS(newState) };
     });
   }, [calculateClickPower, calculateCPS]);
-
-  setGameState(prev => {
-    const node = prev.ascensionTree.find(n => n.id === id);
-    if (!node || node.owned || prev.ascensionPoints < node.cost) return prev;
-  });
 
   const buyAscensionNode = useCallback((id: string) => {
     setGameState(prev => {
@@ -235,8 +218,11 @@ export function useGameState() {
     setGameState(prev => {
       const gain = calculatePrestigeGain(prev);
       if (gain <= 0) return prev;
+      // Preserve ascension points when prestiging
       return {
         ...getInitialState(),
+        ascensionPoints: prev.ascensionPoints,
+        totalAscensionPoints: prev.totalAscensionPoints,
         prestigePoints: prev.prestigePoints + gain,
         totalPrestigePoints: prev.totalPrestigePoints + gain,
       };
@@ -247,8 +233,11 @@ export function useGameState() {
     setGameState(prev => {
       const gain = calculateAscensionGain(prev);
       if (gain <= 0) return prev;
+      // Preserve prestige points when ascending
       return {
         ...getInitialState(),
+        prestigePoints: prev.prestigePoints,
+        totalPrestigePoints: prev.totalPrestigePoints,
         ascensionPoints: prev.ascensionPoints + gain,
         totalAscensionPoints: prev.totalAscensionPoints + gain,
       };
