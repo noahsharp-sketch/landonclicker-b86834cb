@@ -2,7 +2,9 @@ import { formatNumber } from '@/lib/formatNumber';
 import { AudioControls } from './AudioControls';
 import { AchievementsPanel } from './AchievementsPanel';
 import { StatisticsPanel } from './StatisticsPanel';
-import type { Achievement, GameStats } from '@/types/types';
+import { QuestsPanel } from './QuestsPanel';
+import { LeaderboardPanel } from './LeaderboardPanel';
+import type { Achievement, GameStats, GameState, LeaderboardEntry } from '@/types/types';
 
 interface StatsBarProps {
   clicks: number;
@@ -11,6 +13,7 @@ interface StatsBarProps {
   clickPower: number;
   achievements: Achievement[];
   stats: GameStats;
+  gameState: GameState;
   audioSettings: {
     volume: number;
     sfxEnabled: boolean;
@@ -20,6 +23,9 @@ interface StatsBarProps {
   onSfxToggle: (enabled: boolean) => void;
   onMusicToggle: (enabled: boolean) => void;
   playAchievement: () => void;
+  onClaimQuestReward: (questId: string) => void;
+  onClaimChallengeReward: (challengeId: string) => void;
+  onAddLeaderboardScore: (name: string, type: LeaderboardEntry['type']) => void;
 }
 
 export function StatsBar({ 
@@ -29,11 +35,15 @@ export function StatsBar({
   clickPower,
   achievements,
   stats,
+  gameState,
   audioSettings,
   onVolumeChange,
   onSfxToggle,
   onMusicToggle,
   playAchievement,
+  onClaimQuestReward,
+  onClaimChallengeReward,
+  onAddLeaderboardScore,
 }: StatsBarProps) {
   return (
     <header className="bg-card border-b-2 border-primary neon-border px-4 py-3">
@@ -62,6 +72,15 @@ export function StatsBar({
         </div>
 
         <div className="flex items-center gap-2">
+          <QuestsPanel
+            gameState={gameState}
+            onClaimQuestReward={onClaimQuestReward}
+            onClaimChallengeReward={onClaimChallengeReward}
+          />
+          <LeaderboardPanel
+            gameState={gameState}
+            onAddScore={onAddLeaderboardScore}
+          />
           <StatisticsPanel 
             stats={stats}
             currentCPS={cps}
