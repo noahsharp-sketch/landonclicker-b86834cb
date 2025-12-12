@@ -22,40 +22,59 @@ export function PrestigePanel({
 }: PrestigePanelProps) {
   const prestigeGain = Math.floor(gameState.lifetimeClicks / 1_000_000);
   const ascensionGain = Math.floor(Math.sqrt(gameState.totalPrestigePoints / 100));
+  const clicksNeeded = 1_000_000 - (gameState.lifetimeClicks % 1_000_000);
+  const ppNeeded = Math.pow(ascensionGain + 1, 2) * 100 - gameState.totalPrestigePoints;
 
   return (
     <div className="bg-card border-t-2 border-primary neon-border p-4">
       <div className="container mx-auto space-y-4">
-        {/* Action buttons */}
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2">
-            <span className="text-neon-yellow text-xs font-retro">PP: {formatNumber(gameState.prestigePoints)}</span>
+        {/* Prestige Section */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Prestige */}
+          <div className="bg-background/50 rounded-lg p-3 border border-neon-yellow/30">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-neon-yellow font-bold text-sm font-retro">⭐ PRESTIGE</h3>
+              <span className="text-neon-yellow text-xs font-retro">PP: {formatNumber(gameState.prestigePoints)}</span>
+            </div>
+            <p className="text-muted-foreground text-xs mb-2">
+              Reset progress to earn <span className="text-neon-yellow font-bold">Prestige Points (PP)</span>. 
+              Earn 1 PP per 1M lifetime clicks.
+            </p>
+            <p className="text-xs text-muted-foreground mb-2">
+              {prestigeGain > 0 
+                ? `You'll gain ${prestigeGain} PP` 
+                : `Need ${formatNumber(clicksNeeded)} more clicks for 1 PP`}
+            </p>
             <button 
               onClick={onPrestige}
               disabled={prestigeGain <= 0}
-              className="bg-neon-yellow text-background font-bold px-3 py-1 rounded text-sm hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-neon-yellow text-background font-bold px-3 py-2 rounded text-sm hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Prestige +{prestigeGain}
+              Prestige {prestigeGain > 0 && `+${prestigeGain} PP`}
             </button>
           </div>
-          
-          <div className="flex items-center gap-2">
-            <span className="text-neon-purple text-xs font-retro">AP: {formatNumber(gameState.ascensionPoints)}</span>
+
+          {/* Ascension */}
+          <div className="bg-background/50 rounded-lg p-3 border border-neon-purple/30">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-neon-purple font-bold text-sm font-retro">🌟 ASCENSION</h3>
+              <span className="text-neon-purple text-xs font-retro">AP: {formatNumber(gameState.ascensionPoints)}</span>
+            </div>
+            <p className="text-muted-foreground text-xs mb-2">
+              Reset everything (including PP) to earn <span className="text-neon-purple font-bold">Ascension Points (AP)</span>. 
+              Earn AP based on total PP earned: √(total PP / 100).
+            </p>
+            <p className="text-xs text-muted-foreground mb-2">
+              {ascensionGain > 0 
+                ? `You'll gain ${ascensionGain} AP` 
+                : `Need ${formatNumber(Math.max(0, ppNeeded))} more total PP for 1 AP`}
+            </p>
             <button 
               onClick={onAscend}
               disabled={ascensionGain <= 0}
-              className="bg-neon-purple text-background font-bold px-3 py-1 rounded text-sm hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-neon-purple text-background font-bold px-3 py-2 rounded text-sm hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Ascend +{ascensionGain}
-            </button>
-          </div>
-          
-          <div className="ml-auto flex gap-2">
-            <button onClick={onSave} className="bg-neon-cyan text-background font-bold px-3 py-1 rounded text-sm hover:scale-105 transition-transform">
-              Save
-            </button>
-            <button onClick={onReset} className="bg-destructive text-destructive-foreground font-bold px-3 py-1 rounded text-sm hover:scale-105 transition-transform">
-              Reset
+              Ascend {ascensionGain > 0 && `+${ascensionGain} AP`}
             </button>
           </div>
         </div>
@@ -63,11 +82,11 @@ export function PrestigePanel({
         {/* Skill Trees */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Prestige Skills */}
-          <div>
-            <h3 className="text-neon-yellow font-bold mb-2 text-sm font-retro">⭐ Prestige Skills</h3>
-            <div className="flex flex-wrap gap-2">
+          <div className="bg-background/30 rounded-lg p-3">
+            <h4 className="text-neon-yellow font-bold mb-2 text-xs font-retro">⭐ Prestige Skills (spend PP)</h4>
+            <div className="space-y-2">
               {gameState.skillTree.map(node => (
-                <SkillNodeButton 
+                <SkillNodeCard 
                   key={node.id} 
                   node={node} 
                   points={gameState.prestigePoints} 
@@ -79,11 +98,11 @@ export function PrestigePanel({
           </div>
 
           {/* Ascension Skills */}
-          <div>
-            <h3 className="text-neon-purple font-bold mb-2 text-sm font-retro">🌟 Ascension Skills</h3>
-            <div className="flex flex-wrap gap-2">
+          <div className="bg-background/30 rounded-lg p-3">
+            <h4 className="text-neon-purple font-bold mb-2 text-xs font-retro">🌟 Ascension Skills (spend AP)</h4>
+            <div className="space-y-2">
               {gameState.ascensionTree.map(node => (
-                <SkillNodeButton 
+                <SkillNodeCard 
                   key={node.id} 
                   node={node} 
                   points={gameState.ascensionPoints} 
@@ -94,12 +113,22 @@ export function PrestigePanel({
             </div>
           </div>
         </div>
+
+        {/* Save/Reset */}
+        <div className="flex justify-end gap-2">
+          <button onClick={onSave} className="bg-neon-cyan text-background font-bold px-4 py-1 rounded text-sm hover:scale-105 transition-transform">
+            Save
+          </button>
+          <button onClick={onReset} className="bg-destructive text-destructive-foreground font-bold px-4 py-1 rounded text-sm hover:scale-105 transition-transform">
+            Reset All
+          </button>
+        </div>
       </div>
     </div>
   );
 }
 
-function SkillNodeButton({ 
+function SkillNodeCard({ 
   node, 
   points, 
   onBuy, 
@@ -113,23 +142,33 @@ function SkillNodeButton({
   const canAfford = points >= node.cost && !node.owned;
   const bgColor = color === 'yellow' ? 'bg-neon-yellow' : 'bg-neon-purple';
   const borderColor = color === 'yellow' ? 'border-neon-yellow' : 'border-neon-purple';
+  const textColor = color === 'yellow' ? 'text-neon-yellow' : 'text-neon-purple';
   
   return (
     <button
       onClick={onBuy}
       disabled={!canAfford}
-      title={`${node.name}: ${node.description} (Cost: ${node.cost})`}
       className={`
-        px-3 py-2 rounded-lg font-bold text-xs transition-all
+        w-full text-left p-2 rounded-lg transition-all
         ${node.owned 
           ? `${bgColor} text-background` 
           : canAfford 
-            ? `border ${borderColor} text-foreground hover:scale-105` 
-            : 'border border-muted text-muted-foreground cursor-not-allowed'
+            ? `border ${borderColor} text-foreground hover:scale-[1.02]` 
+            : 'border border-muted/50 text-muted-foreground cursor-not-allowed opacity-60'
         }
       `}
     >
-      {node.name} {!node.owned && `(${node.cost})`}
+      <div className="flex justify-between items-center">
+        <span className="font-bold text-xs">{node.name}</span>
+        {node.owned ? (
+          <span className="text-xs">✓ Owned</span>
+        ) : (
+          <span className={`text-xs ${canAfford ? textColor : ''}`}>{node.cost} {color === 'yellow' ? 'PP' : 'AP'}</span>
+        )}
+      </div>
+      <p className={`text-xs mt-1 ${node.owned ? 'opacity-80' : 'text-muted-foreground'}`}>
+        {node.description}
+      </p>
     </button>
   );
 }
