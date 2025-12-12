@@ -10,7 +10,6 @@ interface AudioSettings {
 
 export function useSound() {
   const audioContextRef = useRef<AudioContext | null>(null);
-  const musicOscillatorRef = useRef<OscillatorNode | null>(null);
   const musicGainRef = useRef<GainNode | null>(null);
   const masterGainRef = useRef<GainNode | null>(null);
 
@@ -59,11 +58,19 @@ export function useSound() {
     setSettings(prev => ({ ...prev, musicEnabled: enabled }));
   }, []);
 
+  const musicIntervalRef = useRef<number | null>(null);
+
   // Background music using oscillators
   const startMusic = useCallback(() => {
     try {
       const ctx = getAudioContext();
-      if (musicOscillatorRef.current) return;
+      
+      // Resume audio context if suspended (browser autoplay policy)
+      if (ctx.state === 'suspended') {
+        ctx.resume();
+      }
+      
+      if (musicIntervalRef.current) return;
 
       musicGainRef.current = ctx.createGain();
       musicGainRef.current.connect(masterGainRef.current!);
@@ -74,7 +81,7 @@ export function useSound() {
       let noteIndex = 0;
 
       const playNote = () => {
-        if (!settings.musicEnabled || !musicGainRef.current) return;
+        if (!musicGainRef.current) return;
 
         const osc = ctx.createOscillator();
         const noteGain = ctx.createGain();
@@ -94,19 +101,17 @@ export function useSound() {
         noteIndex = (noteIndex + 1) % notes.length;
       };
 
-      const musicInterval = setInterval(playNote, 500);
-      (musicOscillatorRef as any).intervalId = musicInterval;
-      musicOscillatorRef.current = {} as OscillatorNode; // Marker that music is playing
+      musicIntervalRef.current = window.setInterval(playNote, 500);
     } catch (e) {
-      // Audio not supported
+      console.error('Music start error:', e);
     }
-  }, [getAudioContext, settings.volume, settings.musicEnabled]);
+  }, [getAudioContext, settings.volume]);
 
   const stopMusic = useCallback(() => {
-    if ((musicOscillatorRef as any).intervalId) {
-      clearInterval((musicOscillatorRef as any).intervalId);
+    if (musicIntervalRef.current) {
+      clearInterval(musicIntervalRef.current);
+      musicIntervalRef.current = null;
     }
-    musicOscillatorRef.current = null;
     if (musicGainRef.current) {
       musicGainRef.current.disconnect();
       musicGainRef.current = null;
