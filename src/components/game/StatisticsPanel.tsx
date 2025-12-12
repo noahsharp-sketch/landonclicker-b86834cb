@@ -1,5 +1,5 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
-import type { GameStats } from '@/hooks/useGameState';
+import type { GameStats } from '@/types/types';
 import { formatNumber } from '@/lib/formatNumber';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { BarChart3 } from 'lucide-react';

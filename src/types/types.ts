@@ -45,6 +45,7 @@ export interface GameStats {
   totalClicks: number;
   cpsHistory: { time: number; cps: number }[];
   clicksHistory: { time: number; clicks: number }[];
+  lastOnlineTime: number;
 }
 
 export interface GameState {

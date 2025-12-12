@@ -2,7 +2,7 @@ import { formatNumber } from '@/lib/formatNumber';
 import { AudioControls } from './AudioControls';
 import { AchievementsPanel } from './AchievementsPanel';
 import { StatisticsPanel } from './StatisticsPanel';
-import type { Achievement, GameStats } from '@/hooks/useGameState';
+import type { Achievement, GameStats } from '@/types/types';
 
 interface StatsBarProps {
   clicks: number;

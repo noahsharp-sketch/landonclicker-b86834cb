@@ -4,7 +4,7 @@ import { StatsBar } from './StatsBar';
 import { ClickArea } from './ClickArea';
 import { UpgradesPanel } from './UpgradesPanel';
 import { PrestigePanel } from './PrestigePanel';
-import { StatisticsPanel } from './StatisticsPanel';
+import { formatNumber } from '@/lib/formatNumber';
 
 export function LandonClicker() {
   const {
@@ -15,12 +15,9 @@ export function LandonClicker() {
     buyAscensionNode,
     prestige,
     ascend,
-    setFormula,
     saveGame,
     resetGame,
-    getUpgradeCost,
-    calculatePrestigeGain,
-    calculateAscensionGain,
+    offlineEarnings,
   } = useGameState();
 
   const { 
@@ -37,6 +34,16 @@ export function LandonClicker() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background crt-overlay">
+      {/* Offline Earnings Notification */}
+      {offlineEarnings && offlineEarnings > 0 && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 animate-scale-in">
+          <div className="bg-card border-2 border-neon-cyan neon-border px-4 py-3 rounded-lg">
+            <p className="text-neon-cyan font-bold text-sm">Welcome back!</p>
+            <p className="text-foreground text-xs">You earned {formatNumber(offlineEarnings)} clicks while away!</p>
+          </div>
+        </div>
+      )}
+
       <StatsBar
         clicks={gameState.clicks}
         cps={gameState.cps}

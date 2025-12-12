@@ -1,4 +1,4 @@
-import type { GameState, SkillNode, AscensionNode } from '@/hooks/useGameState';
+import type { GameState, SkillNode, AscensionNode } from '@/types/types';
 import { formatNumber } from '@/lib/formatNumber';
 
 interface PrestigePanelProps {
@@ -84,7 +84,7 @@ export function PrestigePanel({
           {/* Prestige Skills */}
           <div className="bg-background/30 rounded-lg p-3">
             <h4 className="text-neon-yellow font-bold mb-2 text-xs font-retro">⭐ Prestige Skills (spend PP)</h4>
-            <div className="space-y-2">
+            <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto">
               {gameState.skillTree.map(node => (
                 <SkillNodeCard 
                   key={node.id} 
@@ -100,7 +100,7 @@ export function PrestigePanel({
           {/* Ascension Skills */}
           <div className="bg-background/30 rounded-lg p-3">
             <h4 className="text-neon-purple font-bold mb-2 text-xs font-retro">🌟 Ascension Skills (spend AP)</h4>
-            <div className="space-y-2">
+            <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto">
               {gameState.ascensionTree.map(node => (
                 <SkillNodeCard 
                   key={node.id} 
