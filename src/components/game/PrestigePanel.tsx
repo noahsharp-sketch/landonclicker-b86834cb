@@ -1,7 +1,8 @@
+import React from 'react';
 import type { GameState, SkillNode, AscensionNode } from '@/hooks/useGameState';
 
 interface PrestigePanelProps {
-  gameState?: GameState; // optional
+  gameState?: GameState;
   calculatePrestigeGain: (state: GameState) => number;
   calculateAscensionGain: (state: GameState) => number;
   onPrestige: () => void;
@@ -24,29 +25,7 @@ const formulaNames = [
 ];
 
 export function PrestigePanel({
-  gameState = {
-    clicks: 0,
-    lifetimeClicks: 0,
-    clickPower: 1,
-    cps: 0,
-    prestigePoints: 0,
-    totalPrestigePoints: 0,
-    ascensionPoints: 0,
-    totalAscensionPoints: 0,
-    totalPrestiges: 0,
-    upgrades: [],
-    skillTree: [],
-    ascensionTree: [],
-    achievements: [],
-    stats: {
-      startTime: Date.now(),
-      totalPlaytime: 0,
-      bestCPS: 0,
-      totalClicks: 0,
-      cpsHistory: [],
-      clicksHistory: [],
-    },
-  },
+  gameState,
   calculatePrestigeGain,
   calculateAscensionGain,
   onPrestige,
@@ -60,6 +39,8 @@ export function PrestigePanel({
   playAscension,
   playPurchase,
 }: PrestigePanelProps) {
+  if (!gameState) return null; // safe check
+
   const prestigeGain = calculatePrestigeGain(gameState);
   const ascensionGain = calculateAscensionGain(gameState);
 
@@ -93,13 +74,10 @@ export function PrestigePanel({
     }
   };
 
-  const skillTree = gameState.skillTree || [];
-  const ascensionTree = gameState.ascensionTree || [];
-
   return (
-    <div className="bg-card border-t-2 border-primary neon-border p-4">
+    <div className="bg-card border-t-2 border-primary neon-border p-4 rounded-md">
       <div className="container mx-auto">
-        {/* Controls */}
+        {/* Controls row */}
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-4 text-[10px] md:text-xs">
             <div>
@@ -161,11 +139,11 @@ export function PrestigePanel({
           </div>
         </div>
 
-        {/* Prestige Skills */}
+        {/* Prestige Skill Tree */}
         <div className="mb-4">
           <h3 className="text-[10px] md:text-xs text-neon-yellow mb-2">Prestige Skills</h3>
           <div className="flex flex-wrap justify-center items-center gap-2 md:gap-4">
-            {skillTree.map((node, index) => (
+            {gameState.skillTree?.map((node, index) => (
               <div key={node.id} className="flex items-center">
                 <SkillNodeButton 
                   node={node} 
@@ -173,7 +151,7 @@ export function PrestigePanel({
                   onBuy={() => handleBuyNode(node.id)}
                   color="yellow"
                 />
-                {index < skillTree.length - 1 && (
+                {index < gameState.skillTree.length - 1 && (
                   <div className="w-4 md:w-8 h-0.5 bg-border mx-1" />
                 )}
               </div>
@@ -181,18 +159,18 @@ export function PrestigePanel({
           </div>
         </div>
 
-        {/* Ascension Skills */}
+        {/* Ascension Skill Tree */}
         <div>
           <h3 className="text-[10px] md:text-xs text-neon-purple mb-2">Ascension Skills</h3>
           <div className="flex flex-wrap justify-center items-center gap-2 md:gap-4">
-            {ascensionTree.map((node, index) => (
+            {gameState.ascensionTree?.map((node, index) => (
               <div key={node.id} className="flex items-center">
                 <AscensionNodeButton 
                   node={node} 
                   points={gameState.ascensionPoints}
                   onBuy={() => handleBuyAscensionNode(node.id)}
                 />
-                {index < ascensionTree.length - 1 && (
+                {index < gameState.ascensionTree.length - 1 && (
                   <div className="w-4 md:w-8 h-0.5 bg-neon-purple/30 mx-1" />
                 )}
               </div>
@@ -203,8 +181,6 @@ export function PrestigePanel({
     </div>
   );
 }
-
-// ----------------- Node Buttons -----------------
 
 function SkillNodeButton({ 
   node, 
@@ -224,9 +200,9 @@ function SkillNodeButton({
       onClick={onBuy}
       disabled={!canAfford}
       title={`${node.name}: ${node.description} (Cost: ${node.cost})`}
-      className={`w-12 h-12 md:w-14 md:h-14 rounded-lg flex items-center justify-center text-[8px] md:text-[10px] font-bold transition-all
+      className={`w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center text-[8px] md:text-[10px] font-bold transition-all
         ${node.owned 
-          ? 'bg-gray-400 text-gray-800 neon-border' 
+          ? 'bg-neon-green text-background neon-border' 
           : canAfford 
             ? `bg-card border-2 border-neon-${color} text-neon-${color} hover:scale-110 cursor-pointer` 
             : 'bg-muted border-2 border-muted-foreground text-muted-foreground cursor-not-allowed'}`}
@@ -255,9 +231,9 @@ function AscensionNodeButton({
       onClick={onBuy}
       disabled={!canAfford}
       title={`${node.name}: ${node.description} (Cost: ${node.cost})`}
-      className={`w-12 h-12 md:w-14 md:h-14 rounded-lg flex items-center justify-center text-[8px] md:text-[10px] font-bold transition-all
+      className={`w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center text-[8px] md:text-[10px] font-bold transition-all
         ${node.owned 
-          ? 'bg-gray-400 text-gray-800' 
+          ? 'bg-neon-purple text-white' 
           : canAfford 
             ? 'bg-card border-2 border-neon-purple text-neon-purple hover:scale-110 cursor-pointer' 
             : 'bg-muted border-2 border-muted-foreground text-muted-foreground cursor-not-allowed'}`}
