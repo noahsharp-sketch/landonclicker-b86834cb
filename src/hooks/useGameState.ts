@@ -111,6 +111,7 @@ export function useGameState() {
   }
 
   // ----------------- Calculation Functions -----------------
+
   const calculateClickPower = useCallback((state: GameState) => {
     let power = 1;
     state.upgrades.filter(u => u.type === 'clickPower').forEach(u => power += u.effect * u.owned);
@@ -121,7 +122,9 @@ export function useGameState() {
 
   const calculateCPS = useCallback((state: GameState) => {
     let cps = 0;
-    state.upgrades.filter(u => u.type === 'autoClicker').forEach(u => cps += u.effect * u.owned);
+    state.upgrades.filter(u => u.type === 'autoClicker').forEach(u => {
+      cps += u.effect * u.owned * state.clickPower;
+    });
     const cpsBoost = state.skillTree.find(s => s.id === 'b' && s.owned);
     if (cpsBoost) cps *= cpsBoost.effect;
     return cps;
@@ -140,6 +143,7 @@ export function useGameState() {
   }, []);
 
   // ----------------- Action Functions -----------------
+
   const buySkillNode = useCallback((id: string) => {
     setGameState(prev => {
       const node = prev.skillTree.find(n => n.id === id);
@@ -160,7 +164,7 @@ export function useGameState() {
   }, []);
 
   const setFormula = useCallback((formula: string) => {
-    // stored for future use
+    // Formula is stored for future use
   }, []);
 
   const saveGame = useCallback(() => {
@@ -201,8 +205,6 @@ export function useGameState() {
       if (gain <= 0) return prev;
       return {
         ...getInitialState(),
-        ascensionPoints: prev.ascensionPoints, // preserve ascension
-        totalAscensionPoints: prev.totalAscensionPoints,
         prestigePoints: prev.prestigePoints + gain,
         totalPrestigePoints: prev.totalPrestigePoints + gain,
       };
@@ -232,14 +234,15 @@ export function useGameState() {
         const newClicks = prev.clicks + prev.cps * delta;
         const newLifetime = prev.lifetimeClicks + prev.cps * delta;
         const newBestCPS = Math.max(prev.stats.bestCPS, prev.cps);
-
+        
+        // Track history every 10 seconds
         const shouldAddHistory = prev.stats.cpsHistory.length === 0 || 
           now - (prev.stats.cpsHistory[prev.stats.cpsHistory.length - 1]?.time || 0) > 10000;
-
+        
         const newCpsHistory = shouldAddHistory 
           ? [...prev.stats.cpsHistory.slice(-50), { time: now, cps: prev.cps }]
           : prev.stats.cpsHistory;
-
+        
         const newClicksHistory = shouldAddHistory
           ? [...prev.stats.clicksHistory.slice(-50), { time: now, clicks: newLifetime }]
           : prev.stats.clicksHistory;
