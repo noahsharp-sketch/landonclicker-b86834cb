@@ -2,8 +2,8 @@ import { useGameState } from '@/hooks/useGameState';
 import { useSound } from '@/hooks/useSound';
 import { StatsBar } from './StatsBar';
 import { ClickArea } from './ClickArea';
-import  UpgradesPanel  from './UpgradesPanel';
-import  PrestigePanel  from './PrestigePanel';
+import UpgradesPanel from './UpgradesPanel';
+import PrestigePanel from './PrestigePanel';
 import { StatisticsPanel } from './StatisticsPanel';
 
 export function LandonClicker() {
@@ -15,9 +15,6 @@ export function LandonClicker() {
     buyAscensionNode,
     prestige,
     ascend,
-    setFormula,
-    saveGame,
-    resetGame,
     getUpgradeCost,
     calculatePrestigeGain,
     calculateAscensionGain,
@@ -77,8 +74,8 @@ export function LandonClicker() {
         onAscend={() => { ascend(); playAscension(); }}
         onBuySkillNode={(id) => { buySkillNode(id); playPurchase(); }}
         onBuyAscensionNode={(id) => { buyAscensionNode(id); playPurchase(); }}
-        onSave={saveGame}
-        onReset={resetGame}
+        onSave={() => localStorage.setItem('landon-clicker-save', JSON.stringify(gameState))}
+        onReset={() => { localStorage.removeItem('landon-clicker-save'); window.location.reload(); }}
       />
     </div>
   );
