@@ -1,48 +1,53 @@
-import type { Upgrade } from "@/hooks/useGameState";
+import type { Upgrade } from '@/hooks/useGameState';
 
 interface UpgradesPanelProps {
-  upgrades: Upgrade[];
+  upgrades?: Upgrade[]; // optional to avoid crash
   clicks: number;
   buyUpgrade: (id: string) => void;
-  getUpgradeCost: (upgrade: Upgrade) => number;
 }
 
-export function UpgradesPanel({ upgrades, clicks, buyUpgrade, getUpgradeCost }: UpgradesPanelProps) {
-  const clickUpgrades = upgrades.filter(u => u.type === "clickPower");
-  const autoUpgrades = upgrades.filter(u => u.type === "autoClicker");
+export function UpgradesPanel({ upgrades = [], clicks, buyUpgrade }: UpgradesPanelProps) {
+  const clickUpgrades = upgrades.filter(u => u.type === 'clickPower');
+  const autoUpgrades = upgrades.filter(u => u.type === 'autoClicker');
 
-  const renderUpgradeButton = (u: Upgrade, color: string) => {
-    const cost = getUpgradeCost(u);
+  const UpgradeButton = ({ upgrade }: { upgrade: Upgrade }) => {
+    const cost = Math.floor(upgrade.baseCost * Math.pow(upgrade.costMultiplier, upgrade.owned));
     const canAfford = clicks >= cost;
+
     return (
       <button
-        key={u.id}
-        onClick={() => buyUpgrade(u.id)}
+        onClick={() => canAfford && buyUpgrade(upgrade.id)}
         disabled={!canAfford}
-        className={`
-          relative w-32 h-16 rounded-lg p-2 flex flex-col items-center justify-center font-bold text-sm
-          transition-all duration-200
-          ${u.owned > 0 ? 'bg-gray-400 text-gray-800 cursor-not-allowed' : `bg-${color}-300 text-white`}
-          ${canAfford && u.owned === 0 ? 'hover:scale-105 hover:shadow-lg hover:bg-yellow-400' : ''}
-        `}
+        title={`${upgrade.name}: ${upgrade.description} (Cost: ${cost})`}
+        className={`w-24 h-16 rounded-lg p-2 flex flex-col items-center justify-center font-bold transition-all text-[10px]
+          ${upgrade.owned > 0 ? 'bg-gray-300 text-gray-800' : canAfford ? 'bg-yellow-400 hover:scale-105 border-2 border-yellow-500 cursor-pointer' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}
       >
-        <div className="flex items-center justify-center text-xl">{u.name}</div>
-        <div className="text-xs mt-1">{u.description}</div>
-        <div className="absolute bottom-1 right-1 text-xs font-bold">{cost} 💎</div>
+        <span className="text-sm">{upgrade.name}</span>
+        <span className="text-[8px]">{upgrade.owned > 0 ? `Owned: ${upgrade.owned}` : `Cost: ${cost}`}</span>
       </button>
     );
   };
 
   return (
-    <div className="p-4 bg-card border-t-2 border-primary neon-border">
-      <h3 className="text-lg font-bold mb-2 text-yellow-500">Click Power Upgrades</h3>
-      <div className="flex flex-wrap gap-3 mb-4">
-        {clickUpgrades.map(u => renderUpgradeButton(u, "red"))}
+    <div className="flex flex-col gap-4 p-4">
+      {/* Click Power Upgrades */}
+      <div>
+        <h3 className="text-sm font-bold text-yellow-600 mb-2">Click Power Upgrades</h3>
+        <div className="flex flex-wrap gap-2">
+          {clickUpgrades.map(u => (
+            <UpgradeButton key={u.id} upgrade={u} />
+          ))}
+        </div>
       </div>
 
-      <h3 className="text-lg font-bold mb-2 text-blue-500">Auto-Clicker Upgrades</h3>
-      <div className="flex flex-wrap gap-3">
-        {autoUpgrades.map(u => renderUpgradeButton(u, "blue"))}
+      {/* Auto-Clicker Upgrades */}
+      <div>
+        <h3 className="text-sm font-bold text-purple-600 mb-2">Auto-Clicker Upgrades</h3>
+        <div className="flex flex-wrap gap-2">
+          {autoUpgrades.map(u => (
+            <UpgradeButton key={u.id} upgrade={u} />
+          ))}
+        </div>
       </div>
     </div>
   );
