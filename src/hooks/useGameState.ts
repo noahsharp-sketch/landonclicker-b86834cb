@@ -111,28 +111,19 @@ export function useGameState() {
   }
 
   // ----------------- Calculation Functions -----------------
-
   const calculateClickPower = useCallback((state: GameState) => {
     let power = 1;
-    state.upgrades.filter(u => u.type === 'clickPower').forEach(u => {
-      power += u.effect * u.owned; // linear scaling
-    });
+    state.upgrades.filter(u => u.type === 'clickPower').forEach(u => power += u.effect * u.owned);
     const clickMulti = state.skillTree.find(s => s.id === 'a' && s.owned);
     if (clickMulti) power *= clickMulti.effect;
-    const ascMulti = state.ascensionTree.find(s => s.type === 'allMulti' && s.owned);
-    if (ascMulti) power *= ascMulti.effect;
     return power;
   }, []);
 
   const calculateCPS = useCallback((state: GameState) => {
     let cps = 0;
-    state.upgrades.filter(u => u.type === 'autoClicker').forEach(u => {
-      cps += u.effect * u.owned * state.clickPower; // linear scaling
-    });
+    state.upgrades.filter(u => u.type === 'autoClicker').forEach(u => cps += u.effect * u.owned);
     const cpsBoost = state.skillTree.find(s => s.id === 'b' && s.owned);
     if (cpsBoost) cps *= cpsBoost.effect;
-    const ascMulti = state.ascensionTree.find(s => s.type === 'allMulti' && s.owned);
-    if (ascMulti) cps *= ascMulti.effect;
     return cps;
   }, []);
 
@@ -149,7 +140,6 @@ export function useGameState() {
   }, []);
 
   // ----------------- Action Functions -----------------
-
   const buySkillNode = useCallback((id: string) => {
     setGameState(prev => {
       const node = prev.skillTree.find(n => n.id === id);
@@ -169,6 +159,21 @@ export function useGameState() {
     });
   }, []);
 
+  const setFormula = useCallback((formula: string) => {
+    // stored for future use
+  }, []);
+
+  const saveGame = useCallback(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(gameState));
+  }, [gameState]);
+
+  const resetGame = useCallback(() => {
+    if (confirm('Are you sure you want to reset all progress?')) {
+      localStorage.removeItem(STORAGE_KEY);
+      setGameState(getInitialState());
+    }
+  }, []);
+
   const handleClick = useCallback(() => {
     setGameState(prev => ({
       ...prev,
@@ -183,6 +188,7 @@ export function useGameState() {
       if (!upgrade) return prev;
       const cost = Math.floor(upgrade.baseCost * Math.pow(upgrade.costMultiplier, upgrade.owned));
       if (prev.clicks < cost) return prev;
+
       const newUpgrades = prev.upgrades.map(u => u.id === id ? { ...u, owned: u.owned + 1 } : u);
       const newState = { ...prev, upgrades: newUpgrades, clicks: prev.clicks - cost };
       return { ...newState, clickPower: calculateClickPower(newState), cps: calculateCPS(newState) };
@@ -195,11 +201,10 @@ export function useGameState() {
       if (gain <= 0) return prev;
       return {
         ...getInitialState(),
+        ascensionPoints: prev.ascensionPoints, // preserve ascension
+        totalAscensionPoints: prev.totalAscensionPoints,
         prestigePoints: prev.prestigePoints + gain,
         totalPrestigePoints: prev.totalPrestigePoints + gain,
-        ascensionPoints: prev.ascensionPoints,
-        totalAscensionPoints: prev.totalAscensionPoints,
-        ascensionTree: prev.ascensionTree,
       };
     });
   }, [calculatePrestigeGain]);
@@ -212,30 +217,29 @@ export function useGameState() {
         ...getInitialState(),
         ascensionPoints: prev.ascensionPoints + gain,
         totalAscensionPoints: prev.totalAscensionPoints + gain,
-        prestigePoints: prev.prestigePoints,
-        totalPrestigePoints: prev.totalPrestigePoints,
-        skillTree: prev.skillTree,
       };
     });
   }, [calculateAscensionGain]);
 
-  // Auto-clicker & stats loop
+  // Auto-clicker loop & stats tracking
   useEffect(() => {
     const interval = setInterval(() => {
       const now = Date.now();
       const delta = (now - lastTickRef.current) / 1000;
       lastTickRef.current = now;
+
       setGameState(prev => {
         const newClicks = prev.clicks + prev.cps * delta;
         const newLifetime = prev.lifetimeClicks + prev.cps * delta;
         const newBestCPS = Math.max(prev.stats.bestCPS, prev.cps);
 
-        const shouldAddHistory = prev.stats.cpsHistory.length === 0 ||
+        const shouldAddHistory = prev.stats.cpsHistory.length === 0 || 
           now - (prev.stats.cpsHistory[prev.stats.cpsHistory.length - 1]?.time || 0) > 10000;
 
-        const newCpsHistory = shouldAddHistory
+        const newCpsHistory = shouldAddHistory 
           ? [...prev.stats.cpsHistory.slice(-50), { time: now, cps: prev.cps }]
           : prev.stats.cpsHistory;
+
         const newClicksHistory = shouldAddHistory
           ? [...prev.stats.clicksHistory.slice(-50), { time: now, clicks: newLifetime }]
           : prev.stats.clicksHistory;
@@ -272,19 +276,21 @@ export function useGameState() {
     buyAscensionNode,
     prestige,
     ascend,
+    setFormula,
+    saveGame,
+    resetGame,
+    getUpgradeCost,
     calculatePrestigeGain,
     calculateAscensionGain,
-    getUpgradeCost,
   };
 }
 
 // ----------------- Initial Data -----------------
-
 const initialUpgrades: Upgrade[] = [
-  { id: 'energy', name: '⚡ Energy Drink', description: '+2 click power', baseCost: 100, costMultiplier: 1.2, owned: 0, effect: 2, type: 'clickPower' },
-  { id: 'superClick', name: 'Super Click', description: '+5 click power', baseCost: 1000, costMultiplier: 1.25, owned: 0, effect: 5, type: 'clickPower' },
-  { id: 'sean', name: "💜 Sean's Love", description: '+1 auto-clicker', baseCost: 500, costMultiplier: 1.3, owned: 0, effect: 1, type: 'autoClicker' },
-  { id: 'megaAuto', name: 'Mega Auto', description: '+5 auto-clickers', baseCost: 5000, costMultiplier: 1.35, owned: 0, effect: 5, type: 'autoClicker' },
+  { id: 'energy', name: '⚡ Energy Drink', description: '+2 click power', baseCost: 100, costMultiplier: 1.15, owned: 0, effect: 2, type: 'clickPower' },
+  { id: 'sean', name: "💜 Sean's Love", description: '+1 auto-clicker', baseCost: 1000, costMultiplier: 1.15, owned: 0, effect: 1, type: 'autoClicker' },
+  { id: 'superClick', name: 'Super Click', description: '+5 click power', baseCost: 5000, costMultiplier: 1.2, owned: 0, effect: 5, type: 'clickPower' },
+  { id: 'megaAuto', name: 'Mega Auto', description: '+5 auto-clickers', baseCost: 10000, costMultiplier: 1.2, owned: 0, effect: 5, type: 'autoClicker' },
 ];
 
 const initialSkillTree: SkillNode[] = [
@@ -293,9 +299,8 @@ const initialSkillTree: SkillNode[] = [
 ];
 
 const initialAscensionTree: AscensionNode[] = [
-  { id: 'asc1', name: 'Prestige Master', description: '2x prestige gain', cost: 2, owned: false, effect: 2, type: 'prestigeMulti' },
-  { id: 'asc2', name: 'Universal Power', description: '3x all production', cost: 5, owned: false, effect: 3, type: 'allMulti' },
-  { id: 'asc3', name: 'Super Start', description: '+100 starting clicks', cost: 5, owned: false, effect: 100, type: 'megaStart' },
+  { id: 'asc1', name: 'Prestige Master', description: '2x prestige gain', cost: 1, owned: false, effect: 2, type: 'prestigeMulti' },
+  { id: 'asc2', name: 'Universal Power', description: '3x all production', cost: 2, owned: false, effect: 3, type: 'allMulti' },
 ];
 
 function createInitialAchievements(): Achievement[] {
