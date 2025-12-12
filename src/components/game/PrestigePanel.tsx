@@ -1,4 +1,5 @@
 import type { GameState, SkillNode, AscensionNode } from '@/hooks/useGameState';
+import { formatNumber } from '@/lib/formatNumber';
 
 interface PrestigePanelProps {
   gameState: GameState;
@@ -6,9 +7,8 @@ interface PrestigePanelProps {
   onAscend: () => void;
   onBuySkillNode: (id: string) => void;
   onBuyAscensionNode: (id: string) => void;
-  playPrestige: () => void;
-  playAscension: () => void;
-  playPurchase: () => void;
+  onSave: () => void;
+  onReset: () => void;
 }
 
 export function PrestigePanel({
@@ -17,38 +17,81 @@ export function PrestigePanel({
   onAscend,
   onBuySkillNode,
   onBuyAscensionNode,
-  playPrestige,
-  playAscension,
-  playPurchase,
+  onSave,
+  onReset,
 }: PrestigePanelProps) {
   const prestigeGain = Math.floor(gameState.lifetimeClicks / 1_000_000);
   const ascensionGain = Math.floor(Math.sqrt(gameState.totalPrestigePoints / 100));
 
   return (
-    <div className="bg-card border-t-2 border-primary neon-border p-4 rounded-lg">
+    <div className="bg-card border-t-2 border-primary neon-border p-4">
       <div className="container mx-auto space-y-4">
-        <div className="flex gap-4">
-          <button onClick={() => { if(prestigeGain>0){onPrestige();playPrestige();} }} className="bg-yellow-400 text-black font-bold px-4 py-2 rounded hover:scale-105 disabled:opacity-60" disabled={prestigeGain<=0}>Prestige +{prestigeGain}</button>
-          <button onClick={() => { if(ascensionGain>0){onAscend();playAscension();} }} className="bg-purple-500 text-white font-bold px-4 py-2 rounded hover:scale-105 disabled:opacity-60" disabled={ascensionGain<=0}>Ascend +{ascensionGain}</button>
-        </div>
-
-        {/* Prestige Skills */}
-        <div>
-          <h3 className="text-yellow-400 font-bold mb-2">Prestige Skills</h3>
-          <div className="flex flex-col space-y-3">
-            {gameState.skillTree.map(node => (
-              <SkillNodeButton key={node.id} node={node} points={gameState.prestigePoints} onBuy={() => { onBuySkillNode(node.id); playPurchase(); }} />
-            ))}
+        {/* Action buttons */}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-neon-yellow text-xs font-retro">PP: {formatNumber(gameState.prestigePoints)}</span>
+            <button 
+              onClick={onPrestige}
+              disabled={prestigeGain <= 0}
+              className="bg-neon-yellow text-background font-bold px-3 py-1 rounded text-sm hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Prestige +{prestigeGain}
+            </button>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <span className="text-neon-purple text-xs font-retro">AP: {formatNumber(gameState.ascensionPoints)}</span>
+            <button 
+              onClick={onAscend}
+              disabled={ascensionGain <= 0}
+              className="bg-neon-purple text-background font-bold px-3 py-1 rounded text-sm hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Ascend +{ascensionGain}
+            </button>
+          </div>
+          
+          <div className="ml-auto flex gap-2">
+            <button onClick={onSave} className="bg-neon-cyan text-background font-bold px-3 py-1 rounded text-sm hover:scale-105 transition-transform">
+              Save
+            </button>
+            <button onClick={onReset} className="bg-destructive text-destructive-foreground font-bold px-3 py-1 rounded text-sm hover:scale-105 transition-transform">
+              Reset
+            </button>
           </div>
         </div>
 
-        {/* Ascension Skills */}
-        <div>
-          <h3 className="text-purple-400 font-bold mb-2">Ascension Skills</h3>
-          <div className="flex flex-col space-y-3">
-            {gameState.ascensionTree.map(node => (
-              <AscensionNodeButton key={node.id} node={node} points={gameState.ascensionPoints} onBuy={() => { onBuyAscensionNode(node.id); playPurchase(); }} />
-            ))}
+        {/* Skill Trees */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Prestige Skills */}
+          <div>
+            <h3 className="text-neon-yellow font-bold mb-2 text-sm font-retro">⭐ Prestige Skills</h3>
+            <div className="flex flex-wrap gap-2">
+              {gameState.skillTree.map(node => (
+                <SkillNodeButton 
+                  key={node.id} 
+                  node={node} 
+                  points={gameState.prestigePoints} 
+                  onBuy={() => onBuySkillNode(node.id)} 
+                  color="yellow"
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Ascension Skills */}
+          <div>
+            <h3 className="text-neon-purple font-bold mb-2 text-sm font-retro">🌟 Ascension Skills</h3>
+            <div className="flex flex-wrap gap-2">
+              {gameState.ascensionTree.map(node => (
+                <SkillNodeButton 
+                  key={node.id} 
+                  node={node} 
+                  points={gameState.ascensionPoints} 
+                  onBuy={() => onBuyAscensionNode(node.id)} 
+                  color="purple"
+                />
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -56,38 +99,37 @@ export function PrestigePanel({
   );
 }
 
-function SkillNodeButton({ node, points, onBuy }: { node: SkillNode; points: number; onBuy: () => void }) {
+function SkillNodeButton({ 
+  node, 
+  points, 
+  onBuy, 
+  color 
+}: { 
+  node: SkillNode | AscensionNode; 
+  points: number; 
+  onBuy: () => void;
+  color: 'yellow' | 'purple';
+}) {
   const canAfford = points >= node.cost && !node.owned;
+  const bgColor = color === 'yellow' ? 'bg-neon-yellow' : 'bg-neon-purple';
+  const borderColor = color === 'yellow' ? 'border-neon-yellow' : 'border-neon-purple';
+  
   return (
     <button
       onClick={onBuy}
       disabled={!canAfford}
-      className={`
-        flex justify-between items-center p-3 rounded-lg font-bold transition-all
-        ${node.owned ? 'bg-gray-400 text-white cursor-not-allowed' : 'bg-yellow-300 hover:scale-105'}
-      `}
       title={`${node.name}: ${node.description} (Cost: ${node.cost})`}
-    >
-      <span>{node.name}</span>
-      <span>{!node.owned && node.cost}</span>
-    </button>
-  );
-}
-
-function AscensionNodeButton({ node, points, onBuy }: { node: AscensionNode; points: number; onBuy: () => void }) {
-  const canAfford = points >= node.cost && !node.owned;
-  return (
-    <button
-      onClick={onBuy}
-      disabled={!canAfford}
       className={`
-        flex justify-between items-center p-3 rounded-lg font-bold transition-all
-        ${node.owned ? 'bg-gray-400 text-white cursor-not-allowed' : 'bg-purple-400 hover:scale-105'}
+        px-3 py-2 rounded-lg font-bold text-xs transition-all
+        ${node.owned 
+          ? `${bgColor} text-background` 
+          : canAfford 
+            ? `border ${borderColor} text-foreground hover:scale-105` 
+            : 'border border-muted text-muted-foreground cursor-not-allowed'
+        }
       `}
-      title={`${node.name}: ${node.description} (Cost: ${node.cost})`}
     >
-      <span>{node.name}</span>
-      <span>{!node.owned && node.cost}</span>
+      {node.name} {!node.owned && `(${node.cost})`}
     </button>
   );
 }

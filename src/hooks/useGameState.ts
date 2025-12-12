@@ -40,6 +40,15 @@ export interface Achievement {
   condition: (state: GameState) => boolean;
 }
 
+export interface GameStats {
+  startTime: number;
+  totalPlaytime: number;
+  bestCPS: number;
+  totalClicks: number;
+  cpsHistory: { time: number; cps: number }[];
+  clicksHistory: { time: number; clicks: number }[];
+}
+
 export interface GameState {
   clicks: number;
   lifetimeClicks: number;
@@ -54,6 +63,7 @@ export interface GameState {
   skillTree: SkillNode[];
   ascensionTree: AscensionNode[];
   achievements: Achievement[];
+  stats: GameStats;
 }
 
 const STORAGE_KEY = 'landon-clicker-save';
@@ -89,10 +99,18 @@ export function useGameState() {
       skillTree: initialSkillTree,
       ascensionTree: initialAscensionTree,
       achievements: createInitialAchievements(),
+      stats: {
+        startTime: Date.now(),
+        totalPlaytime: 0,
+        bestCPS: 0,
+        totalClicks: 0,
+        cpsHistory: [],
+        clicksHistory: [],
+      },
     };
   }
 
-  // ----------------- Functions -----------------
+  // ----------------- Calculation Functions -----------------
 
   const calculateClickPower = useCallback((state: GameState) => {
     let power = 1;
@@ -118,6 +136,46 @@ export function useGameState() {
 
   const calculateAscensionGain = useCallback((state: GameState) => {
     return Math.floor(Math.sqrt(state.totalPrestigePoints / 100));
+  }, []);
+
+  const getUpgradeCost = useCallback((upgrade: Upgrade) => {
+    return Math.floor(upgrade.baseCost * Math.pow(upgrade.costMultiplier, upgrade.owned));
+  }, []);
+
+  // ----------------- Action Functions -----------------
+
+  const buySkillNode = useCallback((id: string) => {
+    setGameState(prev => {
+      const node = prev.skillTree.find(n => n.id === id);
+      if (!node || node.owned || prev.prestigePoints < node.cost) return prev;
+      const newSkillTree = prev.skillTree.map(n => n.id === id ? { ...n, owned: true } : n);
+      const newState = { ...prev, skillTree: newSkillTree, prestigePoints: prev.prestigePoints - node.cost };
+      return { ...newState, clickPower: calculateClickPower(newState), cps: calculateCPS(newState) };
+    });
+  }, [calculateClickPower, calculateCPS]);
+
+  const buyAscensionNode = useCallback((id: string) => {
+    setGameState(prev => {
+      const node = prev.ascensionTree.find(n => n.id === id);
+      if (!node || node.owned || prev.ascensionPoints < node.cost) return prev;
+      const newAscensionTree = prev.ascensionTree.map(n => n.id === id ? { ...n, owned: true } : n);
+      return { ...prev, ascensionTree: newAscensionTree, ascensionPoints: prev.ascensionPoints - node.cost };
+    });
+  }, []);
+
+  const setFormula = useCallback((formula: string) => {
+    // Formula is stored for future use
+  }, []);
+
+  const saveGame = useCallback(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(gameState));
+  }, [gameState]);
+
+  const resetGame = useCallback(() => {
+    if (confirm('Are you sure you want to reset all progress?')) {
+      localStorage.removeItem(STORAGE_KEY);
+      setGameState(getInitialState());
+    }
   }, []);
 
   const handleClick = useCallback(() => {
@@ -165,18 +223,43 @@ export function useGameState() {
     });
   }, [calculateAscensionGain]);
 
-  // Auto-clicker loop
+  // Auto-clicker loop & stats tracking
   useEffect(() => {
     const interval = setInterval(() => {
       const now = Date.now();
       const delta = (now - lastTickRef.current) / 1000;
       lastTickRef.current = now;
 
-      setGameState(prev => ({
-        ...prev,
-        clicks: prev.clicks + prev.cps * delta,
-        lifetimeClicks: prev.lifetimeClicks + prev.cps * delta,
-      }));
+      setGameState(prev => {
+        const newClicks = prev.clicks + prev.cps * delta;
+        const newLifetime = prev.lifetimeClicks + prev.cps * delta;
+        const newBestCPS = Math.max(prev.stats.bestCPS, prev.cps);
+        
+        // Track history every 10 seconds
+        const shouldAddHistory = prev.stats.cpsHistory.length === 0 || 
+          now - (prev.stats.cpsHistory[prev.stats.cpsHistory.length - 1]?.time || 0) > 10000;
+        
+        const newCpsHistory = shouldAddHistory 
+          ? [...prev.stats.cpsHistory.slice(-50), { time: now, cps: prev.cps }]
+          : prev.stats.cpsHistory;
+        
+        const newClicksHistory = shouldAddHistory
+          ? [...prev.stats.clicksHistory.slice(-50), { time: now, clicks: newLifetime }]
+          : prev.stats.clicksHistory;
+
+        return {
+          ...prev,
+          clicks: newClicks,
+          lifetimeClicks: newLifetime,
+          stats: {
+            ...prev.stats,
+            totalPlaytime: prev.stats.totalPlaytime + delta,
+            bestCPS: newBestCPS,
+            cpsHistory: newCpsHistory,
+            clicksHistory: newClicksHistory,
+          },
+        };
+      });
     }, 100);
 
     return () => clearInterval(interval);
@@ -192,8 +275,14 @@ export function useGameState() {
     gameState,
     handleClick,
     buyUpgrade,
+    buySkillNode,
+    buyAscensionNode,
     prestige,
     ascend,
+    setFormula,
+    saveGame,
+    resetGame,
+    getUpgradeCost,
     calculatePrestigeGain,
     calculateAscensionGain,
   };

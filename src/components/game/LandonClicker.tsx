@@ -4,6 +4,7 @@ import { StatsBar } from './StatsBar';
 import { ClickArea } from './ClickArea';
 import { UpgradesPanel } from './UpgradesPanel';
 import { PrestigePanel } from './PrestigePanel';
+import { StatisticsPanel } from './StatisticsPanel';
 
 export function LandonClicker() {
   const {
@@ -42,6 +43,7 @@ export function LandonClicker() {
         lifetimeClicks={gameState.lifetimeClicks}
         clickPower={gameState.clickPower}
         achievements={gameState.achievements}
+        stats={gameState.stats}
         audioSettings={settings}
         onVolumeChange={setVolume}
         onSfxToggle={setSfxEnabled}
@@ -62,10 +64,7 @@ export function LandonClicker() {
         {/* Upgrades sidebar */}
         <aside className="w-full md:w-80 lg:w-96 bg-card border-l-0 md:border-l-2 border-t-2 md:border-t-0 border-primary neon-border">
           <UpgradesPanel
-            upgrades={gameState.upgrades}
-            clicks={gameState.clicks}
             gameState={gameState}
-            getUpgradeCost={getUpgradeCost}
             onBuyUpgrade={buyUpgrade}
             playPurchase={playPurchase}
           />
@@ -74,18 +73,12 @@ export function LandonClicker() {
 
       <PrestigePanel
         gameState={gameState}
-        calculatePrestigeGain={calculatePrestigeGain}
-        calculateAscensionGain={calculateAscensionGain}
-        onPrestige={prestige}
-        onAscend={ascend}
-        onBuySkillNode={buySkillNode}
-        onBuyAscensionNode={buyAscensionNode}
-        onSetFormula={setFormula}
+        onPrestige={() => { prestige(); playPrestige(); }}
+        onAscend={() => { ascend(); playAscension(); }}
+        onBuySkillNode={(id) => { buySkillNode(id); playPurchase(); }}
+        onBuyAscensionNode={(id) => { buyAscensionNode(id); playPurchase(); }}
         onSave={saveGame}
         onReset={resetGame}
-        playPrestige={playPrestige}
-        playAscension={playAscension}
-        playPurchase={playPurchase}
       />
     </div>
   );
