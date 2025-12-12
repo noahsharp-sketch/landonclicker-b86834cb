@@ -1,5 +1,23 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 
+/* ---------------- MERGE FIX: ensures new upgrades are added safely ---------------- */
+function mergeArrayById<T extends { id: string }>(saved: T[], fresh: T[]) {
+  const map = new Map<string, T>();
+
+  // Add saved entries
+  saved.forEach(item => map.set(item.id, item));
+
+  // Add any new entries (or updated defaults)
+  fresh.forEach(item => {
+    if (!map.has(item.id)) {
+      map.set(item.id, item);
+    }
+  });
+
+  return Array.from(map.values());
+}
+/* ------------------------------------------------------------------------------- */
+
 export interface Upgrade {
   id: string;
   name: string;
@@ -69,21 +87,6 @@ export interface GameState {
 const STORAGE_KEY = 'landon-clicker-save';
 
 export function useGameState() {
-  const [gameState, setGameState] = useState<GameState>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        return { ...getInitialState(), ...parsed };
-      } catch {
-        return getInitialState();
-      }
-    }
-    return getInitialState();
-  });
-
-  const lastTickRef = useRef(Date.now());
-
   function getInitialState(): GameState {
     return {
       clicks: 0,
@@ -109,6 +112,32 @@ export function useGameState() {
       },
     };
   }
+
+  /* ------------ LOAD + MERGE FIX HERE ---------------- */
+  const [gameState, setGameState] = useState<GameState>(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+
+    if (!saved) return getInitialState();
+
+    try {
+      const parsed = JSON.parse(saved);
+      const fresh = getInitialState();
+
+      return {
+        ...fresh,
+        ...parsed,
+        upgrades: mergeArrayById(parsed.upgrades || [], fresh.upgrades),
+        skillTree: mergeArrayById(parsed.skillTree || [], fresh.skillTree),
+        ascensionTree: mergeArrayById(parsed.ascensionTree || [], fresh.ascensionTree),
+        achievements: mergeArrayById(parsed.achievements || [], fresh.achievements)
+      };
+    } catch {
+      return getInitialState();
+    }
+  });
+  /* --------------------------------------------------- */
+
+  const lastTickRef = useRef(Date.now());
 
   // ----------------- Calculation Functions -----------------
 
@@ -154,6 +183,11 @@ export function useGameState() {
     });
   }, [calculateClickPower, calculateCPS]);
 
+  setGameState(prev => {
+    const node = prev.ascensionTree.find(n => n.id === id);
+    if (!node || node.owned || prev.ascensionPoints < node.cost) return prev;
+  });
+
   const buyAscensionNode = useCallback((id: string) => {
     setGameState(prev => {
       const node = prev.ascensionTree.find(n => n.id === id);
@@ -163,9 +197,7 @@ export function useGameState() {
     });
   }, []);
 
-  const setFormula = useCallback((formula: string) => {
-    // Formula is stored for future use
-  }, []);
+  const setFormula = useCallback((formula: string) => {}, []);
 
   const saveGame = useCallback(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(gameState));
@@ -223,7 +255,7 @@ export function useGameState() {
     });
   }, [calculateAscensionGain]);
 
-  // Auto-clicker loop & stats tracking
+  // Auto-clicker loop & stats
   useEffect(() => {
     const interval = setInterval(() => {
       const now = Date.now();
@@ -234,15 +266,14 @@ export function useGameState() {
         const newClicks = prev.clicks + prev.cps * delta;
         const newLifetime = prev.lifetimeClicks + prev.cps * delta;
         const newBestCPS = Math.max(prev.stats.bestCPS, prev.cps);
-        
-        // Track history every 10 seconds
-        const shouldAddHistory = prev.stats.cpsHistory.length === 0 || 
+
+        const shouldAddHistory = prev.stats.cpsHistory.length === 0 ||
           now - (prev.stats.cpsHistory[prev.stats.cpsHistory.length - 1]?.time || 0) > 10000;
-        
-        const newCpsHistory = shouldAddHistory 
+
+        const newCpsHistory = shouldAddHistory
           ? [...prev.stats.cpsHistory.slice(-50), { time: now, cps: prev.cps }]
           : prev.stats.cpsHistory;
-        
+
         const newClicksHistory = shouldAddHistory
           ? [...prev.stats.clicksHistory.slice(-50), { time: now, clicks: newLifetime }]
           : prev.stats.clicksHistory;
@@ -267,7 +298,9 @@ export function useGameState() {
 
   // Auto-save
   useEffect(() => {
-    const interval = setInterval(() => localStorage.setItem(STORAGE_KEY, JSON.stringify(gameState)), 30000);
+    const interval = setInterval(() =>
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(gameState)),
+    30000);
     return () => clearInterval(interval);
   }, [gameState]);
 
@@ -294,10 +327,10 @@ const initialUpgrades: Upgrade[] = [
   { id: 'sean', name: "💜 Sean's Love", description: '+1 auto-clicker', baseCost: 1000, costMultiplier: 1.15, owned: 0, effect: 1, type: 'autoClicker' },
   { id: 'superClick', name: 'Super Click', description: '+5 click power', baseCost: 5000, costMultiplier: 1.2, owned: 0, effect: 5, type: 'clickPower' },
   { id: 'megaAuto', name: "💕Benicio's love", description: '+5 auto-clickers', baseCost: 10000, costMultiplier: 1.2, owned: 0, effect: 5, type: 'autoClicker' },
-  {id: 'hot sauce', name: 'Hot Sauce',description:'+20 click power',baseCost: 20000, costMultiplier: 1.2, owned: 0, effect: 20, type:"clickPower"},
-  {id: 'Evil Ben G', name: 'Evil Ben G',description:'+10 auto-clickers',baseCost: 100000, costMultiplier: 1.2, owned: 0, effect: 10, type:"autoClicker"},
-  {id: 'discord mod', name:'Discord Mod',description:'+100 click power',baseCost: 150000, costMultiplier:1.2, owned: 0, effect: 100, type:"clickPower"},
-  {id: 'macha', name: 'Macha',description:'+500 click power',baseCost: 1000000, costMultiplier: 1.2, owned: 0, effect: 500, type:"clickPower"}, 
+  { id: 'hot sauce', name: 'Hot Sauce', description: '+20 click power', baseCost: 20000, costMultiplier: 1.2, owned: 0, effect: 20, type: "clickPower" },
+  { id: 'Evil Ben G', name: '😈Evil Ben G', description: '+10 auto-clickers', baseCost: 100000, costMultiplier: 1.2, owned: 0, effect: 10, type: "autoClicker" },
+  { id: 'discord mod', name: 'Discord Mod', description: '+100 click power', baseCost: 150000, costMultiplier: 1.2, owned: 0, effect: 100, type: "clickPower" },
+  { id: 'macha', name: 'Macha', description: '+500 click power', baseCost: 1000000, costMultiplier: 1.2, owned: 0, effect: 500, type: "clickPower" },
 ];
 
 const initialSkillTree: SkillNode[] = [
