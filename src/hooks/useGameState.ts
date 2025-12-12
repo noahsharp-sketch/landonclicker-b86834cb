@@ -115,8 +115,7 @@ export function useGameState() {
   const calculateClickPower = useCallback((state: GameState) => {
     let power = 1;
     state.upgrades.filter(u => u.type === 'clickPower').forEach(u => {
-      // Scaling: Each owned clickPower upgrade gives increasingly more power
-      power += u.effect * Math.pow(1.5, u.owned);
+      power += u.effect * u.owned; // linear scaling
     });
     const clickMulti = state.skillTree.find(s => s.id === 'a' && s.owned);
     if (clickMulti) power *= clickMulti.effect;
@@ -128,8 +127,7 @@ export function useGameState() {
   const calculateCPS = useCallback((state: GameState) => {
     let cps = 0;
     state.upgrades.filter(u => u.type === 'autoClicker').forEach(u => {
-      // Scaling: Expensive auto-clickers give higher CPS
-      cps += u.effect * Math.pow(1.5, u.owned) * state.clickPower;
+      cps += u.effect * u.owned * state.clickPower; // linear scaling
     });
     const cpsBoost = state.skillTree.find(s => s.id === 'b' && s.owned);
     if (cpsBoost) cps *= cpsBoost.effect;
@@ -139,13 +137,11 @@ export function useGameState() {
   }, []);
 
   const calculatePrestigeGain = useCallback((state: GameState) => {
-    // Scaling: larger lifetimeClicks gives better prestige
-    return Math.floor(Math.pow(state.lifetimeClicks / 1_000_000, 0.8));
+    return Math.floor(state.lifetimeClicks / 1_000_000);
   }, []);
 
   const calculateAscensionGain = useCallback((state: GameState) => {
-    // Scaling: more total prestige points give better ascension
-    return Math.floor(Math.pow(state.totalPrestigePoints / 100, 0.6));
+    return Math.floor(Math.sqrt(state.totalPrestigePoints / 100));
   }, []);
 
   const getUpgradeCost = useCallback((upgrade: Upgrade) => {
@@ -201,7 +197,6 @@ export function useGameState() {
         ...getInitialState(),
         prestigePoints: prev.prestigePoints + gain,
         totalPrestigePoints: prev.totalPrestigePoints + gain,
-        // Keep ascension points and tree
         ascensionPoints: prev.ascensionPoints,
         totalAscensionPoints: prev.totalAscensionPoints,
         ascensionTree: prev.ascensionTree,
@@ -217,7 +212,6 @@ export function useGameState() {
         ...getInitialState(),
         ascensionPoints: prev.ascensionPoints + gain,
         totalAscensionPoints: prev.totalAscensionPoints + gain,
-        // Keep prestige points and tree
         prestigePoints: prev.prestigePoints,
         totalPrestigePoints: prev.totalPrestigePoints,
         skillTree: prev.skillTree,
