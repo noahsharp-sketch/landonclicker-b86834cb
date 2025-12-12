@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { initialUpgrades, initialSkillTree, initialAscensionTree, createInitialAchievements } from '../data/gameData';
+import { createInitialQuestState, createDailyChallenges, createWeeklyChallenges } from '../data/questData';
 import { calculateClickPower, calculateCPS, calculatePrestigeGain, calculateAscensionGain } from '../utils/calculations';
 import { buyUpgrade as buyUpgradeAction } from '../utils/actions';
-import { GameState } from '../types/types';
+import { GameState, LeaderboardEntry } from '../types/types';
 
 const STORAGE_KEY = 'landon-clicker-save';
 
@@ -50,19 +51,19 @@ export function useGameState() {
       clicksHistory: [],
       lastOnlineTime: Date.now(),
     },
+    questState: createInitialQuestState(),
   });
 
   /* ---------- Calculate offline progress ---------- */
   const calculateOfflineProgress = (state: GameState): GameState => {
     const now = Date.now();
     const lastOnline = state.stats.lastOnlineTime || now;
-    const offlineSeconds = Math.min((now - lastOnline) / 1000, 86400); // Cap at 24 hours
+    const offlineSeconds = Math.min((now - lastOnline) / 1000, 86400);
     
     if (offlineSeconds < 10 || state.cps <= 0) {
       return { ...state, stats: { ...state.stats, lastOnlineTime: now } };
     }
     
-    // Apply 50% efficiency for offline progress
     const offlineGain = state.cps * offlineSeconds * 0.5;
     
     return {
@@ -70,6 +71,48 @@ export function useGameState() {
       clicks: state.clicks + offlineGain,
       lifetimeClicks: state.lifetimeClicks + offlineGain,
       stats: { ...state.stats, lastOnlineTime: now },
+    };
+  };
+
+  /* ---------- Check and reset expired challenges ---------- */
+  const resetExpiredChallenges = (state: GameState): GameState => {
+    const now = Date.now();
+    let needsReset = false;
+    
+    const challenges = state.questState.challenges.map(c => {
+      if (now > c.expiresAt) {
+        needsReset = true;
+        return c;
+      }
+      return c;
+    });
+
+    if (!needsReset) return state;
+
+    // Check if daily reset needed
+    const dailyExpired = challenges.some(c => c.type === 'daily' && now > c.expiresAt);
+    const weeklyExpired = challenges.some(c => c.type === 'weekly' && now > c.expiresAt);
+
+    let newChallenges = [...challenges];
+    
+    if (dailyExpired) {
+      const freshDaily = createDailyChallenges();
+      newChallenges = newChallenges.filter(c => c.type !== 'daily').concat(freshDaily);
+    }
+    
+    if (weeklyExpired) {
+      const freshWeekly = createWeeklyChallenges();
+      newChallenges = newChallenges.filter(c => c.type !== 'weekly').concat(freshWeekly);
+    }
+
+    return {
+      ...state,
+      questState: {
+        ...state.questState,
+        challenges: newChallenges,
+        lastDailyReset: dailyExpired ? now : state.questState.lastDailyReset,
+        lastWeeklyReset: weeklyExpired ? now : state.questState.lastWeeklyReset,
+      },
     };
   };
 
@@ -88,10 +131,17 @@ export function useGameState() {
         ascensionTree: mergeArrayById(parsed.ascensionTree || [], fresh.ascensionTree),
         achievements: mergeAchievements(parsed.achievements || [], fresh.achievements),
         stats: { ...fresh.stats, ...parsed.stats },
+        questState: {
+          ...fresh.questState,
+          ...parsed.questState,
+          quests: mergeArrayById(parsed.questState?.quests || [], fresh.questState.quests),
+          challenges: parsed.questState?.challenges || fresh.questState.challenges,
+          leaderboard: parsed.questState?.leaderboard || [],
+        },
       };
       
-      // Calculate offline progress
       loadedState = calculateOfflineProgress(loadedState);
+      loadedState = resetExpiredChallenges(loadedState);
       
       return loadedState;
     } catch {
@@ -208,6 +258,70 @@ export function useGameState() {
     });
   }, []);
 
+  /* ---------- Quest & Challenge Actions ---------- */
+
+  const claimQuestReward = useCallback((questId: string) => {
+    setGameState(prev => {
+      const quest = prev.questState.quests.find(q => q.id === questId);
+      if (!quest || !quest.completed || quest.claimed) return prev;
+
+      const newQuests = prev.questState.quests.map(q => 
+        q.id === questId ? { ...q, claimed: true } : q
+      );
+
+      return {
+        ...prev,
+        clicks: prev.clicks + (quest.rewards.clicks || 0),
+        prestigePoints: prev.prestigePoints + (quest.rewards.prestigePoints || 0),
+        ascensionPoints: prev.ascensionPoints + (quest.rewards.ascensionPoints || 0),
+        questState: { ...prev.questState, quests: newQuests },
+      };
+    });
+  }, []);
+
+  const claimChallengeReward = useCallback((challengeId: string) => {
+    setGameState(prev => {
+      const challenge = prev.questState.challenges.find(c => c.id === challengeId);
+      if (!challenge || !challenge.completed || challenge.claimed) return prev;
+
+      const newChallenges = prev.questState.challenges.map(c => 
+        c.id === challengeId ? { ...c, claimed: true } : c
+      );
+
+      return {
+        ...prev,
+        clicks: prev.clicks + (challenge.rewards.clicks || 0),
+        prestigePoints: prev.prestigePoints + (challenge.rewards.prestigePoints || 0),
+        questState: { ...prev.questState, challenges: newChallenges },
+      };
+    });
+  }, []);
+
+  const addLeaderboardScore = useCallback((name: string, type: LeaderboardEntry['type']) => {
+    setGameState(prev => {
+      const score = type === 'lifetime' ? prev.lifetimeClicks :
+                    type === 'cps' ? prev.cps :
+                    prev.totalPrestiges;
+
+      const newEntry: LeaderboardEntry = {
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        name,
+        score,
+        date: Date.now(),
+        type,
+      };
+
+      const newLeaderboard = [...prev.questState.leaderboard, newEntry]
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 50);
+
+      return {
+        ...prev,
+        questState: { ...prev.questState, leaderboard: newLeaderboard },
+      };
+    });
+  }, []);
+
   const resetGame = useCallback(() => {
     if (confirm('Are you sure you want to reset all progress?')) {
       localStorage.removeItem(STORAGE_KEY);
@@ -219,6 +333,67 @@ export function useGameState() {
     const stateToSave = { ...gameState, stats: { ...gameState.stats, lastOnlineTime: Date.now() } };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
   }, [gameState]);
+
+  /* ---------- Update Quest & Challenge Progress ---------- */
+  useEffect(() => {
+    setGameState(prev => {
+      const totalUpgrades = prev.upgrades.reduce((sum, u) => sum + u.owned, 0);
+      
+      // Update quests
+      const newQuests = prev.questState.quests.map(quest => {
+        if (quest.completed) return quest;
+
+        const updatedSteps = quest.steps.map(step => {
+          let current = 0;
+          switch (step.type) {
+            case 'clicks': current = prev.clicks; break;
+            case 'lifetimeClicks': current = prev.lifetimeClicks; break;
+            case 'cps': current = prev.cps; break;
+            case 'upgrades': current = totalUpgrades; break;
+            case 'prestiges': current = prev.totalPrestiges; break;
+            case 'clickPower': current = prev.clickPower; break;
+          }
+          return { ...step, current };
+        });
+
+        let currentStep = quest.currentStep;
+        while (currentStep < updatedSteps.length && updatedSteps[currentStep].current >= updatedSteps[currentStep].target) {
+          currentStep++;
+        }
+
+        const completed = currentStep >= updatedSteps.length;
+
+        return { ...quest, steps: updatedSteps, currentStep, completed };
+      });
+
+      // Update challenges
+      const newChallenges = prev.questState.challenges.map(challenge => {
+        if (challenge.completed || challenge.claimed) return challenge;
+
+        let current = 0;
+        switch (challenge.conditionType) {
+          case 'clicks': current = prev.clicks; break;
+          case 'lifetimeClicks': current = prev.lifetimeClicks; break;
+          case 'cps': current = prev.cps; break;
+          case 'upgrades': current = totalUpgrades; break;
+          case 'prestiges': current = prev.totalPrestiges; break;
+        }
+
+        const completed = current >= challenge.target;
+        return { ...challenge, current, completed };
+      });
+
+      const questsChanged = JSON.stringify(newQuests) !== JSON.stringify(prev.questState.quests);
+      const challengesChanged = JSON.stringify(newChallenges) !== JSON.stringify(prev.questState.challenges);
+
+      if (!questsChanged && !challengesChanged) return prev;
+
+      return {
+        ...prev,
+        questState: { ...prev.questState, quests: newQuests, challenges: newChallenges },
+      };
+    });
+  }, [gameState.clicks, gameState.lifetimeClicks, gameState.cps, gameState.totalPrestiges, gameState.clickPower, gameState.upgrades]);
 
   /* ---------- Check Achievements ---------- */
   useEffect(() => {
@@ -296,5 +471,8 @@ export function useGameState() {
     saveGame,
     resetGame,
     offlineEarnings,
+    claimQuestReward,
+    claimChallengeReward,
+    addLeaderboardScore,
   };
 }

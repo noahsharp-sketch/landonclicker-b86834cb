@@ -18,6 +18,9 @@ export function LandonClicker() {
     saveGame,
     resetGame,
     offlineEarnings,
+    claimQuestReward,
+    claimChallengeReward,
+    addLeaderboardScore,
   } = useGameState();
 
   const { 
@@ -51,11 +54,15 @@ export function LandonClicker() {
         clickPower={gameState.clickPower}
         achievements={gameState.achievements}
         stats={gameState.stats}
+        gameState={gameState}
         audioSettings={settings}
         onVolumeChange={setVolume}
         onSfxToggle={setSfxEnabled}
         onMusicToggle={setMusicEnabled}
         playAchievement={playAchievement}
+        onClaimQuestReward={claimQuestReward}
+        onClaimChallengeReward={claimChallengeReward}
+        onAddLeaderboardScore={addLeaderboardScore}
       />
 
       <main className="flex-1 flex flex-col md:flex-row">

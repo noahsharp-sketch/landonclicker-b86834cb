@@ -48,6 +48,68 @@ export interface GameStats {
   lastOnlineTime: number;
 }
 
+// Quest System Types
+export interface QuestStep {
+  id: string;
+  description: string;
+  target: number;
+  current: number;
+  type: 'clicks' | 'lifetimeClicks' | 'cps' | 'upgrades' | 'prestiges' | 'clickPower';
+}
+
+export interface Quest {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  steps: QuestStep[];
+  currentStep: number;
+  completed: boolean;
+  claimed: boolean;
+  rewards: {
+    clicks?: number;
+    prestigePoints?: number;
+    ascensionPoints?: number;
+    achievementId?: string;
+  };
+}
+
+// Challenge System Types
+export interface Challenge {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  type: 'daily' | 'weekly';
+  target: number;
+  current: number;
+  completed: boolean;
+  claimed: boolean;
+  expiresAt: number;
+  conditionType: 'clicks' | 'lifetimeClicks' | 'cps' | 'upgrades' | 'prestiges';
+  rewards: {
+    clicks?: number;
+    prestigePoints?: number;
+  };
+}
+
+// Leaderboard Types
+export interface LeaderboardEntry {
+  id: string;
+  name: string;
+  score: number;
+  date: number;
+  type: 'lifetime' | 'cps' | 'prestiges';
+}
+
+export interface QuestState {
+  quests: Quest[];
+  challenges: Challenge[];
+  leaderboard: LeaderboardEntry[];
+  lastDailyReset: number;
+  lastWeeklyReset: number;
+}
+
 export interface GameState {
   clicks: number;
   lifetimeClicks: number;
@@ -63,4 +125,5 @@ export interface GameState {
   ascensionTree: AscensionNode[];
   achievements: Achievement[];
   stats: GameStats;
+  questState: QuestState;
 }
