@@ -20,62 +20,69 @@ export default function PrestigePanel({
   onSave,
   onReset,
 }: PrestigePanelProps) {
-  if (!gameState) return null;
-
   return (
-    <div className="p-4 bg-card border-t-2 border-primary neon-border flex flex-col md:flex-row gap-4">
-      <div className="flex-1">
-        <h2 className="font-bold mb-2">Prestige</h2>
+    <div className="bg-card p-4 border-t-2 border-primary flex flex-col space-y-4">
+      <div className="flex space-x-2">
         <button
-          className="w-full p-2 mb-2 rounded-lg bg-yellow-300 hover:scale-105 transition"
           onClick={onPrestige}
+          className="flex-1 rounded-lg p-3 bg-yellow-400 hover:bg-yellow-500 shadow-lg font-bold"
         >
-          Prestige (+{Math.floor(gameState.lifetimeClicks / 1_000_000)} points)
+          Prestige ({gameState.prestigePoints}💎)
         </button>
-        <h2 className="font-bold mb-2 mt-2">Skill Tree</h2>
-        {gameState.skillTree.map(node => (
-          <button
-            key={node.id}
-            disabled={node.owned || gameState.prestigePoints < node.cost}
-            className={`w-full p-2 mb-1 rounded-lg ${node.owned ? 'bg-gray-400' : 'bg-green-300 hover:scale-105'} transition`}
-            onClick={() => onBuySkillNode(node.id)}
-          >
-            {node.name} ({node.owned ? 'Owned' : node.cost} pts)
-          </button>
-        ))}
-      </div>
-
-      <div className="flex-1">
-        <h2 className="font-bold mb-2">Ascension</h2>
         <button
-          className="w-full p-2 mb-2 rounded-lg bg-yellow-400 hover:scale-105 transition"
           onClick={onAscend}
+          className="flex-1 rounded-lg p-3 bg-indigo-400 hover:bg-indigo-500 shadow-lg font-bold"
         >
-          Ascend (+{Math.floor(Math.sqrt(gameState.totalPrestigePoints / 100))} pts)
+          Ascend ({gameState.ascensionPoints}⭐)
         </button>
-        <h2 className="font-bold mb-2 mt-2">Ascension Tree</h2>
-        {gameState.ascensionTree.map(node => (
-          <button
-            key={node.id}
-            disabled={node.owned || gameState.ascensionPoints < node.cost}
-            className={`w-full p-2 mb-1 rounded-lg ${node.owned ? 'bg-gray-400' : 'bg-pink-300 hover:scale-105'} transition`}
-            onClick={() => onBuyAscensionNode(node.id)}
-          >
-            {node.name} ({node.owned ? 'Owned' : node.cost} pts)
-          </button>
-        ))}
       </div>
 
-      <div className="flex flex-col gap-2 md:w-48">
+      <div>
+        <h3 className="font-bold mb-2">Skill Tree</h3>
+        <div className="flex flex-wrap gap-2">
+          {gameState.skillTree.map(node => (
+            <button
+              key={node.id}
+              onClick={() => !node.owned && onBuySkillNode(node.id)}
+              className={`
+                rounded-lg p-2 text-sm transition-all
+                ${node.owned ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-400 hover:bg-green-500'}
+              `}
+            >
+              {node.name} ({node.cost}💎)
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <h3 className="font-bold mb-2">Ascension Tree</h3>
+        <div className="flex flex-wrap gap-2">
+          {gameState.ascensionTree.map(node => (
+            <button
+              key={node.id}
+              onClick={() => !node.owned && onBuyAscensionNode(node.id)}
+              className={`
+                rounded-lg p-2 text-sm transition-all
+                ${node.owned ? 'bg-gray-400 cursor-not-allowed' : 'bg-pink-400 hover:bg-pink-500'}
+              `}
+            >
+              {node.name} ({node.cost}⭐)
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex space-x-2">
         <button
-          className="w-full p-2 rounded-lg bg-blue-300 hover:scale-105 transition"
           onClick={onSave}
+          className="flex-1 rounded-lg p-2 bg-blue-400 hover:bg-blue-500 shadow font-bold"
         >
           Save
         </button>
         <button
-          className="w-full p-2 rounded-lg bg-red-400 hover:scale-105 transition"
           onClick={onReset}
+          className="flex-1 rounded-lg p-2 bg-red-400 hover:bg-red-500 shadow font-bold"
         >
           Reset
         </button>
