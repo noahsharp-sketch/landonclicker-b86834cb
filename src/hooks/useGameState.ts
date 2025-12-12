@@ -293,7 +293,9 @@ const initialUpgrades: Upgrade[] = [
   { id: 'energy', name: '⚡ Energy Drink', description: '+2 click power', baseCost: 100, costMultiplier: 1.15, owned: 0, effect: 2, type: 'clickPower' },
   { id: 'sean', name: "💜 Sean's Love", description: '+1 auto-clicker', baseCost: 1000, costMultiplier: 1.15, owned: 0, effect: 1, type: 'autoClicker' },
   { id: 'superClick', name: 'Super Click', description: '+5 click power', baseCost: 5000, costMultiplier: 1.2, owned: 0, effect: 5, type: 'clickPower' },
-  { id: 'megaAuto', name: 'Mega Auto', description: '+5 auto-clickers', baseCost: 10000, costMultiplier: 1.2, owned: 0, effect: 5, type: 'autoClicker' },
+  { id: 'megaAuto', name: "💕Benicio's love", description: '+5 auto-clickers', baseCost: 10000, costMultiplier: 1.2, owned: 0, effect: 5, type: 'autoClicker' },
+  {id: 'hot sauce', name: 'Hot Sauce',description:'+10 click power',baseCost: 20000, costMultiplier: 1.2, owned: 0, effect: 10, type:"clickPower"},
+  {id: 'Evil Ben G', name: 'Evil Ben G',description:'+10 auto-clickers',baseCost: 100000, costMultiplier: 1.2, owned: 0, effect: 10, type:"autoClicker"},  
 ];
 
 const initialSkillTree: SkillNode[] = [
