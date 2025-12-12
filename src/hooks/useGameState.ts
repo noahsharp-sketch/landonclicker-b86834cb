@@ -14,6 +14,14 @@ function mergeArrayById<T extends { id: string }>(saved: T[], fresh: T[]) {
   return Array.from(map.values());
 }
 
+/* Merge achievements while restoring condition functions */
+function mergeAchievements(saved: any[], fresh: ReturnType<typeof createInitialAchievements>) {
+  return fresh.map(freshAch => {
+    const savedAch = saved.find(s => s.id === freshAch.id);
+    return savedAch ? { ...freshAch, unlocked: savedAch.unlocked } : freshAch;
+  });
+}
+
 /* ---------------- Hook ---------------- */
 export function useGameState() {
   const lastTickRef = useRef(Date.now());
@@ -78,7 +86,7 @@ export function useGameState() {
         upgrades: mergeArrayById(parsed.upgrades || [], fresh.upgrades),
         skillTree: mergeArrayById(parsed.skillTree || [], fresh.skillTree),
         ascensionTree: mergeArrayById(parsed.ascensionTree || [], fresh.ascensionTree),
-        achievements: mergeArrayById(parsed.achievements || [], fresh.achievements),
+        achievements: mergeAchievements(parsed.achievements || [], fresh.achievements),
         stats: { ...fresh.stats, ...parsed.stats },
       };
       
