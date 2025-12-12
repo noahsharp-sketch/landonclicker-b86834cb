@@ -1,7 +1,8 @@
 import { formatNumber } from '@/lib/formatNumber';
 import { AudioControls } from './AudioControls';
 import { AchievementsPanel } from './AchievementsPanel';
-import type { Achievement } from '@/hooks/useGameState';
+import { StatisticsPanel } from './StatisticsPanel';
+import type { Achievement, GameStats } from '@/hooks/useGameState';
 
 interface StatsBarProps {
   clicks: number;
@@ -9,6 +10,7 @@ interface StatsBarProps {
   lifetimeClicks: number;
   clickPower: number;
   achievements: Achievement[];
+  stats: GameStats;
   audioSettings: {
     volume: number;
     sfxEnabled: boolean;
@@ -26,6 +28,7 @@ export function StatsBar({
   lifetimeClicks, 
   clickPower,
   achievements,
+  stats,
   audioSettings,
   onVolumeChange,
   onSfxToggle,
@@ -35,7 +38,7 @@ export function StatsBar({
   return (
     <header className="bg-card border-b-2 border-primary neon-border px-4 py-3">
       <div className="container mx-auto flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-primary neon-text text-sm md:text-lg font-bold">
+        <h1 className="text-primary neon-text text-sm md:text-lg font-bold font-retro">
           🐻 Landon Clicker
         </h1>
 
@@ -46,7 +49,7 @@ export function StatsBar({
           </div>
           <div>
             <span className="text-muted-foreground">CPS: </span>
-            <span className="text-secondary font-bold">{formatNumber(cps)}</span>
+            <span className="text-neon-cyan font-bold">{formatNumber(cps)}</span>
           </div>
           <div className="hidden sm:block">
             <span className="text-muted-foreground">Lifetime: </span>
@@ -54,11 +57,16 @@ export function StatsBar({
           </div>
           <div className="hidden sm:block">
             <span className="text-muted-foreground">Power: </span>
-            <span className="text-primary">{formatNumber(clickPower)}</span>
+            <span className="text-neon-yellow">{formatNumber(clickPower)}</span>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <StatisticsPanel 
+            stats={stats}
+            currentCPS={cps}
+            lifetimeClicks={lifetimeClicks}
+          />
           <AchievementsPanel 
             achievements={achievements} 
             playAchievement={playAchievement}
