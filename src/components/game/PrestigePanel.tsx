@@ -28,99 +28,62 @@ export function PrestigePanel({
   const prestigeGain = calculatePrestigeGain(gameState);
   const ascensionGain = calculateAscensionGain(gameState);
 
-  const handlePrestige = () => {
-    if (prestigeGain > 0) {
-      onPrestige();
-      playPrestige();
-    }
-  };
-
-  const handleAscend = () => {
-    if (ascensionGain > 0 && confirm('Ascension will reset ALL progress including prestige! Are you sure?')) {
-      onAscend();
-      playAscension();
-    }
-  };
-
-  const handleBuyNode = (id: string) => {
-    onBuySkillNode(id);
-    playPurchase();
-  };
-
-  const handleBuyAscensionNode = (id: string) => {
-    onBuyAscensionNode(id);
-    playPurchase();
-  };
-
   return (
-    <div className="bg-card border-t-2 border-primary neon-border p-4">
-      <div className="container mx-auto">
-        {/* Prestige & Ascension Stats */}
-        <div className="flex gap-4 mb-4 text-sm">
+    <div className="bg-card border-t-2 border-primary p-4 rounded-md">
+      <div className="flex justify-between mb-4">
+        <div>
           <span>Prestige: {gameState.prestigePoints}</span>
+        </div>
+        <div>
           <span>Ascension: {gameState.ascensionPoints}</span>
         </div>
+      </div>
 
-        {/* Prestige Button */}
-        <div className="flex gap-2 mb-4">
+      <button
+        onClick={() => { if (prestigeGain > 0) { onPrestige(); playPrestige(); } }}
+        disabled={prestigeGain <= 0}
+        className={`w-full p-2 mb-2 rounded-lg font-bold text-white transition-all ${prestigeGain > 0 ? 'bg-yellow-400 hover:scale-105' : 'bg-gray-400 cursor-not-allowed'}`}
+      >
+        Prestige (+{prestigeGain})
+      </button>
+
+      <button
+        onClick={() => { if (ascensionGain > 0) { onAscend(); playAscension(); } }}
+        disabled={ascensionGain <= 0}
+        className={`w-full p-2 mb-4 rounded-lg font-bold text-white transition-all ${ascensionGain > 0 ? 'bg-purple-500 hover:scale-105' : 'bg-gray-400 cursor-not-allowed'}`}
+      >
+        Ascend (+{ascensionGain})
+      </button>
+
+      <h3 className="font-bold mb-2 text-yellow-400">Prestige Skills</h3>
+      <div className="flex flex-wrap gap-2 mb-4">
+        {gameState.skillTree.map(node => (
           <button
-            onClick={handlePrestige}
-            disabled={prestigeGain <= 0}
-            className={`px-3 py-2 rounded text-xs font-bold transition-all
-              ${prestigeGain > 0 
-                ? 'bg-yellow-400 text-black hover:scale-105 glow' 
-                : 'bg-muted text-muted-foreground cursor-not-allowed'}`}
+            key={node.id}
+            disabled={node.owned || gameState.prestigePoints < node.cost}
+            onClick={() => { onBuySkillNode(node.id); playPurchase(); }}
+            className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${node.owned ? 'bg-gray-400 text-gray-700 cursor-not-allowed' : 'bg-yellow-200 hover:scale-105'}`}
+            title={`${node.name}: ${node.description} (Cost: ${node.cost})`}
           >
-            Prestige (+{prestigeGain})
+            {node.name} ({node.cost})
           </button>
+        ))}
+      </div>
 
+      <h3 className="font-bold mb-2 text-purple-500">Ascension Skills</h3>
+      <div className="flex flex-wrap gap-2">
+        {gameState.ascensionTree.map(node => (
           <button
-            onClick={handleAscend}
-            disabled={ascensionGain <= 0}
-            className={`px-3 py-2 rounded text-xs font-bold transition-all
-              ${ascensionGain > 0 
-                ? 'bg-purple-400 text-white hover:scale-105 glow' 
-                : 'bg-muted text-muted-foreground cursor-not-allowed'}`}
+            key={node.id}
+            disabled={node.owned || gameState.ascensionPoints < node.cost}
+            onClick={() => { onBuyAscensionNode(node.id); playPurchase(); }}
+            className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${node.owned ? 'bg-gray-400 text-gray-700 cursor-not-allowed' : 'bg-purple-300 hover:scale-105'}`}
+            title={`${node.name}: ${node.description} (Cost: ${node.cost})`}
           >
-            Ascend (+{ascensionGain})
+            {node.name} ({node.cost})
           </button>
-        </div>
-
-        {/* Prestige Skill Tree */}
-        <div className="mb-4">
-          <h3 className="text-yellow-400 mb-2">Prestige Skills</h3>
-          <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
-            {gameState.skillTree.map(node => (
-              <button
-                key={node.id}
-                onClick={() => handleBuyNode(node.id)}
-                disabled={node.owned || gameState.prestigePoints < node.cost}
-                title={`${node.name}: ${node.description} (Cost: ${node.cost})`}
-                className={`p-2 rounded-lg text-xs font-bold text-center transition-all
-                  ${node.owned 
-                    ? 'bg-gray-300 text-gray-700 cursor-not-allowed' 
-                    : 'bg-yellow-300 text-black hover:scale-105 glow'}`}
-              >
-                {node.name} <br /> {node.owned ? 'Owned' : `Cost: ${node.cost}`}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Ascension Skill Tree */}
-        <div>
-          <h3 className="text-purple-400 mb-2">Ascension Skills</h3>
-          <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
-            {gameState.ascensionTree.map(node => (
-              <button>
-                key={node.id}
-                onClick={() => handleBuyAscensionNode(node.id)}
-                disabled={node.owned || gameState.ascensionPoints < node.cost}
-                title={`${node.name}: ${node.description} (Cost: ${node.cost})`}
-                className={`p-2 rounded-lg text-xs font-bold text-center transition-all
-                  ${node.owned 
-                    ? 'bg-gray-300 text-gray-700 cursor-not-allowed' 
-                    : 'bg-purple-300 text-white hover:scale-105 glow'}`}
-              >
-                {node.name} <br /> {node.owned ? 'Owned' : `Cost: ${node.cost}`}
-              </button
+        ))}
+      </div>
+    </div>
+  );
+}
