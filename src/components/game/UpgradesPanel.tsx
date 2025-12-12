@@ -1,5 +1,5 @@
 import React from 'react';
-import { GameState, Upgrade } from '@/hooks/useGameState';
+import { Upgrade, GameState } from '@/hooks/useGameState';
 
 interface UpgradesPanelProps {
   gameState: GameState;
@@ -7,43 +7,39 @@ interface UpgradesPanelProps {
   playPurchase: () => void;
 }
 
-const UpgradesPanel: React.FC<UpgradesPanelProps> = ({ gameState, onBuyUpgrade, playPurchase }) => {
-  const clickUpgrades = gameState.upgrades.filter(u => u.type === 'clickPower');
-  const autoUpgrades = gameState.upgrades.filter(u => u.type === 'autoClicker');
-
-  const renderUpgradeButton = (upgrade: Upgrade) => {
-    const cost = Math.floor(upgrade.baseCost * upgrade.owned);
-    const affordable = gameState.clicks >= cost;
-
-    return (
-      <button
-        key={upgrade.id}
-        className={`upgrade-btn ${affordable ? 'affordable' : 'unaffordable'} ${upgrade.owned > 0 ? 'owned' : ''}`}
-        onClick={() => {
-          if (affordable) {
-            onBuyUpgrade(upgrade.id);
-            playPurchase();
-          }
-        }}
-      >
-        <div className="flex justify-between items-center">
-          <span>{upgrade.name}</span>
-          <span>{cost}</span>
-        </div>
-        <div className="text-sm opacity-80">+{upgrade.effect * (upgrade.owned + 1)} {upgrade.type === 'clickPower' ? 'Click Power' : 'CPS'}</div>
-      </button>
-    );
-  };
-
+export default function UpgradesPanel({ gameState, onBuyUpgrade, playPurchase }: UpgradesPanelProps) {
   return (
-    <div className="flex flex-col gap-2 p-2">
-      <h2 className="text-lg font-bold mb-2">Click Upgrades</h2>
-      {clickUpgrades.map(renderUpgradeButton)}
+    <div className="p-4 flex flex-col gap-3">
+      {gameState.upgrades.map((upgrade: Upgrade) => {
+        const cost = Math.floor(upgrade.baseCost * upgrade.costMultiplier ** upgrade.owned);
+        const affordable = gameState.clicks >= cost;
 
-      <h2 className="text-lg font-bold mt-4 mb-2">Auto-Clickers</h2>
-      {autoUpgrades.map(renderUpgradeButton)}
+        return (
+          <button
+            key={upgrade.id}
+            className={`
+              w-full p-3 rounded-lg border-2 border-yellow-400
+              bg-yellow-200 hover:bg-yellow-300 hover:shadow-lg
+              transition-all font-bold text-center
+              ${!affordable ? 'opacity-50 cursor-not-allowed' : ''}
+            `}
+            onClick={() => {
+              if (affordable) {
+                onBuyUpgrade(upgrade.id);
+                playPurchase();
+              }
+            }}
+          >
+            <div className="flex justify-between items-center">
+              <span>{upgrade.name}</span>
+              <span>{cost}</span>
+            </div>
+            <div className="text-sm opacity-80">
+              +{upgrade.effect * (upgrade.owned + 1)} {upgrade.type === 'clickPower' ? 'Click Power' : 'CPS'}
+            </div>
+          </button>
+        );
+      })}
     </div>
   );
-};
-
-export default UpgradesPanel;
+}
