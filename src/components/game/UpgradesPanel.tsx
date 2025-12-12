@@ -1,41 +1,48 @@
-import React from 'react';
-import type { Upgrade } from '@/hooks/useGameState';
+import React from "react";
+import { useGameState } from "./useGameState";
 
-interface UpgradesPanelProps {
-  upgrades?: Upgrade[];
-  clicks: number;
-  buyUpgrade: (id: string) => void;
-}
+export default function UpgradesPanel() {
+  const { gameState, buyUpgrade, getUpgradeCost } = useGameState();
 
-export function UpgradesPanel({ upgrades = [], clicks, buyUpgrade }: UpgradesPanelProps) {
-  const clickUpgrades = upgrades.filter(u => u.type === 'clickPower');
-  const autoUpgrades = upgrades.filter(u => u.type === 'autoClicker');
+  if (!gameState || !gameState.upgrades) return null;
 
-  const renderUpgrade = (u: Upgrade) => {
-    const cost = Math.floor(u.baseCost * Math.pow(u.costMultiplier, u.owned));
-    const canAfford = clicks >= cost;
+  const clickUpgrades = gameState.upgrades.filter(u => u.type === "clickPower");
+  const autoClickers = gameState.upgrades.filter(u => u.type === "autoClicker");
+
+  const renderUpgrade = (upgrade: typeof clickUpgrades[0]) => {
+    const cost = getUpgradeCost(upgrade);
+    const affordable = gameState.clicks >= cost;
+
     return (
-      <button
-        key={u.id}
-        onClick={() => buyUpgrade(u.id)}
-        disabled={!canAfford}
-        className={`flex items-center justify-between p-2 rounded-md mb-2 w-full transition-all
-          ${u.owned > 0 ? 'bg-gray-300 text-gray-700 cursor-default' : canAfford ? 'bg-yellow-400 hover:bg-yellow-500 cursor-pointer' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
-        title={`${u.name}: ${u.description}`}
+      <div
+        key={upgrade.id}
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          padding: "0.5rem",
+          marginBottom: "0.5rem",
+          borderRadius: "8px",
+          background: affordable ? "#ffe680" : "#ddd",
+          border: "2px solid #f0c040",
+          cursor: affordable ? "pointer" : "not-allowed",
+          transition: "0.2s",
+        }}
+        onClick={() => affordable && buyUpgrade(upgrade.id)}
       >
-        <span className="font-bold">{u.name}</span>
-        <span className="font-mono">{cost}💰</span>
-      </button>
+        <span>{upgrade.name}</span>
+        <span>{cost}</span>
+      </div>
     );
   };
 
   return (
-    <div className="p-4 bg-card rounded-md">
-      <h3 className="text-lg font-bold mb-2">Click Upgrades</h3>
-      <div className="flex flex-col">{clickUpgrades.map(renderUpgrade)}</div>
-
-      <h3 className="text-lg font-bold mt-4 mb-2">Auto Clickers</h3>
-      <div className="flex flex-col">{autoUpgrades.map(renderUpgrade)}</div>
+    <div style={{ width: "350px" }}>
+      <h2 style={{ fontSize: "1.2rem", marginBottom: "0.5rem" }}>Upgrades</h2>
+      <h3>Click Upgrades</h3>
+      {clickUpgrades.map(renderUpgrade)}
+      <h3>Auto Clickers</h3>
+      {autoClickers.map(renderUpgrade)}
     </div>
   );
 }

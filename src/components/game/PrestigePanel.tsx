@@ -1,63 +1,31 @@
 import React from "react";
+import { useGameState } from "./useGameState";
 
-interface PrestigePanelProps {
-  gameState: any;
-  calculatePrestigeGain: (state: any) => number;
-  calculateAscensionGain: (state: any) => number;
-  onPrestige: () => void;
-  onAscend: () => void;
-}
+export default function PrestigePanel() {
+  const { gameState, prestige, calculatePrestigeGain } = useGameState();
 
-export default function PrestigePanel({
-  gameState,
-  calculatePrestigeGain,
-  calculateAscensionGain,
-  onPrestige,
-  onAscend,
-}: PrestigePanelProps) {
-  if (!gameState) return null;
-
-  const prestigeGain = calculatePrestigeGain(gameState);
-  const ascensionGain = calculateAscensionGain(gameState);
+  const gain = calculatePrestigeGain(gameState);
 
   return (
-    <div style={{ padding: "1rem", border: "2px solid gold", borderRadius: "10px", background: "#fef1e6" }}>
-      <h2>Prestige</h2>
+    <div style={{ padding: "1rem", border: "2px solid #f0c040", borderRadius: "12px", background: "#fff0e0", width: "300px" }}>
+      <h2 style={{ fontSize: "1.2rem", marginBottom: "0.5rem" }}>Prestige</h2>
       <p>Prestige Points: {gameState.prestigePoints}</p>
-      <p>Can Gain: {prestigeGain}</p>
+      <p>Next Prestige Gain: {gain}</p>
       <button
-        onClick={onPrestige}
-        disabled={prestigeGain <= 0}
         style={{
-          padding: "0.5rem 1rem",
           marginTop: "0.5rem",
+          padding: "0.5rem 1rem",
+          fontSize: "1rem",
           borderRadius: "8px",
-          border: "2px solid orange",
-          background: prestigeGain > 0 ? "#ffdd88" : "#ccc",
-          fontWeight: "bold",
-          cursor: prestigeGain > 0 ? "pointer" : "not-allowed",
+          border: "2px solid #f0c040",
+          background: gain > 0 ? "#ffe680" : "#ccc",
+          cursor: gain > 0 ? "pointer" : "not-allowed",
+          transition: "0.2s",
         }}
+        onClick={prestige}
+        disabled={gain <= 0}
       >
         Prestige
-      </button>
-
-      <h2 style={{ marginTop: "1rem" }}>Ascension</h2>
-      <p>Ascension Points: {gameState.ascensionPoints}</p>
-      <p>Can Gain: {ascensionGain}</p>
-      <button
-        onClick={onAscend}
-        disabled={ascensionGain <= 0}
-        style={{
-          padding: "0.5rem 1rem",
-          marginTop: "0.5rem",
-          borderRadius: "8px",
-          border: "2px solid violet",
-          background: ascensionGain > 0 ? "#dd88ff" : "#ccc",
-          fontWeight: "bold",
-          cursor: ascensionGain > 0 ? "pointer" : "not-allowed",
-        }}
-      >
-        Ascend
       </button>
     </div>
   );
