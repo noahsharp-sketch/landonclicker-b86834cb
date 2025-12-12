@@ -102,10 +102,45 @@ export interface LeaderboardEntry {
   type: 'lifetime' | 'cps' | 'prestiges';
 }
 
+// Special Events
+export interface SpecialEvent {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  theme: 'gold' | 'cosmic' | 'speed' | 'power' | 'lucky';
+  startsAt: number;
+  endsAt: number;
+  active: boolean;
+  multipliers: {
+    clicks?: number;
+    cps?: number;
+    prestigeGain?: number;
+  };
+  challenges: EventChallenge[];
+  rewards: {
+    clicks?: number;
+    prestigePoints?: number;
+    ascensionPoints?: number;
+  };
+  completed: boolean;
+  claimed: boolean;
+}
+
+export interface EventChallenge {
+  id: string;
+  description: string;
+  target: number;
+  current: number;
+  completed: boolean;
+  type: 'clicks' | 'lifetimeClicks' | 'cps' | 'upgrades' | 'prestiges';
+}
+
 export interface QuestState {
   quests: Quest[];
   challenges: Challenge[];
   leaderboard: LeaderboardEntry[];
+  events: SpecialEvent[];
   lastDailyReset: number;
   lastWeeklyReset: number;
 }

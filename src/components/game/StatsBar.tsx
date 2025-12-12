@@ -4,6 +4,7 @@ import { AchievementsPanel } from './AchievementsPanel';
 import { StatisticsPanel } from './StatisticsPanel';
 import { QuestsPanel } from './QuestsPanel';
 import { LeaderboardPanel } from './LeaderboardPanel';
+import { EventsPanel } from './EventsPanel';
 import type { Achievement, GameStats, GameState, LeaderboardEntry } from '@/types/types';
 
 interface StatsBarProps {
@@ -26,6 +27,7 @@ interface StatsBarProps {
   onClaimQuestReward: (questId: string) => void;
   onClaimChallengeReward: (challengeId: string) => void;
   onAddLeaderboardScore: (name: string, type: LeaderboardEntry['type']) => void;
+  onClaimEventReward: (eventId: string) => void;
 }
 
 export function StatsBar({ 
@@ -44,6 +46,7 @@ export function StatsBar({
   onClaimQuestReward,
   onClaimChallengeReward,
   onAddLeaderboardScore,
+  onClaimEventReward,
 }: StatsBarProps) {
   return (
     <header className="bg-card border-b-2 border-primary neon-border px-4 py-3">
@@ -72,6 +75,10 @@ export function StatsBar({
         </div>
 
         <div className="flex items-center gap-2">
+          <EventsPanel
+            gameState={gameState}
+            onClaimEventReward={onClaimEventReward}
+          />
           <QuestsPanel
             gameState={gameState}
             onClaimQuestReward={onClaimQuestReward}
