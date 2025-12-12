@@ -6,7 +6,7 @@ import UpgradesPanel from './UpgradesPanel';
 import PrestigePanel from './PrestigePanel';
 import { StatisticsPanel } from './StatisticsPanel';
 
-export function LandonClicker() {
+export default function LandonClicker() {  // <-- default export now
   const {
     gameState,
     handleClick,
@@ -15,6 +15,9 @@ export function LandonClicker() {
     buyAscensionNode,
     prestige,
     ascend,
+    setFormula,
+    saveGame,
+    resetGame,
     getUpgradeCost,
     calculatePrestigeGain,
     calculateAscensionGain,
@@ -74,8 +77,8 @@ export function LandonClicker() {
         onAscend={() => { ascend(); playAscension(); }}
         onBuySkillNode={(id) => { buySkillNode(id); playPurchase(); }}
         onBuyAscensionNode={(id) => { buyAscensionNode(id); playPurchase(); }}
-        onSave={() => localStorage.setItem('landon-clicker-save', JSON.stringify(gameState))}
-        onReset={() => { localStorage.removeItem('landon-clicker-save'); window.location.reload(); }}
+        onSave={saveGame}
+        onReset={resetGame}
       />
     </div>
   );
