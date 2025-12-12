@@ -336,11 +336,13 @@ const initialUpgrades: Upgrade[] = [
 const initialSkillTree: SkillNode[] = [
   { id: 'a', name: 'Click Fury', description: '2x click power', cost: 1, owned: false, effect: 2, type: 'clickMulti' },
   { id: 'b', name: 'Auto Boost', description: '1.5x auto-clickers', cost: 2, owned: false, effect: 1.5, type: 'cpsBoost' },
+  { id: 'c', name: 'Auto Multi', description: '3x auto-clicker multi', cost: 2, owned: false, effect: 1.5, type: 'cpsMulti' },  
 ];
 
 const initialAscensionTree: AscensionNode[] = [
   { id: 'asc1', name: 'Prestige Master', description: '2x prestige gain', cost: 1, owned: false, effect: 2, type: 'prestigeMulti' },
   { id: 'asc2', name: 'Universal Power', description: '3x all production', cost: 2, owned: false, effect: 3, type: 'allMulti' },
+  {id:'asc3', name: 'Your Doing To Much',description:'3.5x auto-clickers', cost:5, owned:false, effect:3.5, type: 'ultimateCPS' },
 ];
 
 function createInitialAchievements(): Achievement[] {
