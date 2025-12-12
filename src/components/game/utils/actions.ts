@@ -1,4 +1,4 @@
-import { GameState } from './types';
+import { GameState } from '../types/types';
 import { calculateClickPower, calculateCPS } from './calculations';
 
 export const buyUpgrade = (state: GameState, id: string): GameState => {

@@ -1,4 +1,4 @@
-import { Upgrade, SkillNode, AscensionNode, Achievement } from './types';
+import { Upgrade, SkillNode, AscensionNode, Achievement } from '../types/types';
 
 export const initialUpgrades: Upgrade[] = [
   { id: 'energy', name: '⚡ Energy Drink', description: '+2 click power', baseCost: 100, costMultiplier: 1.15, owned: 0, effect: 2, type: 'clickPower' },

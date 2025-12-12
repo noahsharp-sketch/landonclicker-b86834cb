@@ -1,10 +1,12 @@
-import { useState, useEffect, useRef } from 'react';
-import { GameState } from './types';
-import { initialUpgrades, initialSkillTree, initialAscensionTree, createInitialAchievements } from './gameData';
-import { calculateClickPower, calculateCPS } from './calculations';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { initialUpgrades, initialSkillTree, initialAscensionTree, createInitialAchievements } from '../data/gameData';
+import { calculateClickPower, calculateCPS } from '../utils/calculations';
+import { buyUpgrade as buyUpgradeAction } from '../utils/actions';
+import { GameState } from '../types/types';
 
 const STORAGE_KEY = 'landon-clicker-save';
 
+/* ---------------- Merge helper ---------------- */
 function mergeArrayById<T extends { id: string }>(saved: T[], fresh: T[]) {
   const map = new Map<string, T>();
   saved.forEach(i => map.set(i.id, i));
@@ -12,9 +14,11 @@ function mergeArrayById<T extends { id: string }>(saved: T[], fresh: T[]) {
   return Array.from(map.values());
 }
 
+/* ---------------- Hook ---------------- */
 export function useGameState() {
   const lastTickRef = useRef(Date.now());
 
+  /* ---------- Initial State ---------- */
   const getInitialState = (): GameState => ({
     clicks: 0,
     lifetimeClicks: 0,
@@ -29,9 +33,17 @@ export function useGameState() {
     skillTree: initialSkillTree,
     ascensionTree: initialAscensionTree,
     achievements: createInitialAchievements(),
-    stats: { startTime: Date.now(), totalPlaytime: 0, bestCPS: 0, totalClicks: 0, cpsHistory: [], clicksHistory: [] },
+    stats: {
+      startTime: Date.now(),
+      totalPlaytime: 0,
+      bestCPS: 0,
+      totalClicks: 0,
+      cpsHistory: [],
+      clicksHistory: [],
+    },
   });
 
+  /* ---------- Load saved state ---------- */
   const [gameState, setGameState] = useState<GameState>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (!saved) return getInitialState();
@@ -51,7 +63,51 @@ export function useGameState() {
     }
   });
 
-  // Auto-clicker + stats
+  /* ---------- Game Actions ---------- */
+
+  const handleClick = useCallback(() => {
+    setGameState(prev => ({
+      ...prev,
+      clicks: prev.clicks + prev.clickPower,
+      lifetimeClicks: prev.lifetimeClicks + prev.clickPower,
+    }));
+  }, []);
+
+  const buyUpgrade = useCallback((id: string) => {
+    setGameState(prev => buyUpgradeAction(prev, id));
+  }, []);
+
+  const buySkillNode = useCallback((id: string) => {
+    setGameState(prev => {
+      const node = prev.skillTree.find(n => n.id === id);
+      if (!node || node.owned || prev.prestigePoints < node.cost) return prev;
+      const newSkillTree = prev.skillTree.map(n => n.id === id ? { ...n, owned: true } : n);
+      const newState = { ...prev, skillTree: newSkillTree, prestigePoints: prev.prestigePoints - node.cost };
+      return { ...newState, clickPower: calculateClickPower(newState), cps: calculateCPS(newState) };
+    });
+  }, []);
+
+  const buyAscensionNode = useCallback((id: string) => {
+    setGameState(prev => {
+      const node = prev.ascensionTree.find(n => n.id === id);
+      if (!node || node.owned || prev.ascensionPoints < node.cost) return prev;
+      const newAscensionTree = prev.ascensionTree.map(n => n.id === id ? { ...n, owned: true } : n);
+      return { ...prev, ascensionTree: newAscensionTree, ascensionPoints: prev.ascensionPoints - node.cost };
+    });
+  }, []);
+
+  const resetGame = useCallback(() => {
+    if (confirm('Are you sure you want to reset all progress?')) {
+      localStorage.removeItem(STORAGE_KEY);
+      setGameState(getInitialState());
+    }
+  }, []);
+
+  const saveGame = useCallback(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(gameState));
+  }, [gameState]);
+
+  /* ---------- Auto Clicker + Stats ---------- */
   useEffect(() => {
     const interval = setInterval(() => {
       const now = Date.now();
@@ -72,11 +128,21 @@ export function useGameState() {
     return () => clearInterval(interval);
   }, []);
 
-  // Auto-save
+  /* ---------- Auto Save ---------- */
   useEffect(() => {
-    const interval = setInterval(() => localStorage.setItem(STORAGE_KEY, JSON.stringify(gameState)), 30000);
+    const interval = setInterval(() => {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(gameState));
+    }, 30000);
     return () => clearInterval(interval);
   }, [gameState]);
 
-  return { gameState, setGameState };
+  return {
+    gameState,
+    handleClick,
+    buyUpgrade,
+    buySkillNode,
+    buyAscensionNode,
+    saveGame,
+    resetGame,
+  };
 }

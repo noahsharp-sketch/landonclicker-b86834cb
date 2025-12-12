@@ -1,4 +1,4 @@
-import { GameState } from './types';
+import { GameState } from '../types/types';
 
 export const calculateClickPower = (state: GameState) => {
   let power = 1;
