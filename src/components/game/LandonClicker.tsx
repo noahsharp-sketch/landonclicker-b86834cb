@@ -2,8 +2,8 @@ import { useGameState } from '@/hooks/useGameState';
 import { useSound } from '@/hooks/useSound';
 import { StatsBar } from './StatsBar';
 import { ClickArea } from './ClickArea';
-import { UpgradesPanel } from './UpgradesPanel';
-import { PrestigePanel } from './PrestigePanel';
+import  UpgradesPanel  from './UpgradesPanel';
+import  PrestigePanel  from './PrestigePanel';
 import { StatisticsPanel } from './StatisticsPanel';
 
 export function LandonClicker() {
