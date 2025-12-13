@@ -8,6 +8,7 @@ import {
   createInitialAchievements,
 } from '../data/gameData';
 import { createInitialQuestState, generateSpecialEvents } from '../data/questData';
+import { updateProgress, getStat, resetPeriodicQuests } from '../utils/progressTracker';
 import type { GameState } from '../types/types';
 
 const STORAGE_KEY = 'landon-clicker-save';
@@ -135,57 +136,6 @@ export function useGameState() {
   , []);
 
   /** ---------------------------
-   * Dynamic Stat Access
-   * --------------------------- */
-  const getStat = useCallback((state: GameState, type: string) => {
-    if (type in state) return (state as any)[type];
-    if (type in state.stats) return (state.stats as any)[type];
-    if (type === 'upgrades') return state.upgrades.reduce((sum, u) => sum + u.owned, 0);
-    if (type === 'prestiges') return state.totalPrestiges;
-    if (type === 'ascensions') return state.totalAscensions;
-    if (type === 'transcendences') return state.totalTranscendences;
-    if (type === 'eternities') return state.totalEternities;
-    return 0;
-  }, []);
-
-  /** ---------------------------
-   * Unified Progress Update
-   * Handles achievements, quests, challenges, and events
-   * --------------------------- */
-  const updateProgress = useCallback((state: GameState): GameState => {
-    const updateCollection = <T extends { id: string; type?: string; target?: number; current?: number; completed?: boolean }>(
-      items: T[],
-      typeKey: 'type' | 'conditionType' | 'id' = 'type'
-    ) => {
-      return items.map(item => {
-        if (item.completed) return item;
-        const key = item[typeKey] || '';
-        const current = getStat(state, key);
-        if (!item.completed && item.target !== undefined && current >= item.target) {
-          console.log(`Unlocked: ${item.id}`);
-        }
-        return { ...item, current, completed: item.target !== undefined ? current >= item.target : item.completed };
-      });
-    };
-
-    return {
-      ...state,
-      achievements: updateCollection(state.achievements),
-      questState: {
-        ...state.questState,
-        quests: state.questState.quests.map(q => {
-          const steps = q.steps.map(s => ({ ...s, current: getStat(state, s.type) }));
-          const completed = steps.every(s => s.current >= s.target);
-          const currentStep = steps.findIndex(s => s.current < s.target);
-          return { ...q, steps, completed, currentStep: currentStep === -1 ? steps.length - 1 : currentStep };
-        }),
-        challenges: updateCollection(state.questState.challenges, 'conditionType'),
-        events: updateCollection(state.questState.events, 'id'),
-      },
-    };
-  }, [getStat]);
-
-  /** ---------------------------
    * Core Actions
    * --------------------------- */
   const handleClick = useCallback(() => {
@@ -194,7 +144,7 @@ export function useGameState() {
       clicks: prev.clicks + prev.clickPower,
       lifetimeClicks: prev.lifetimeClicks + prev.clickPower,
     }));
-  }, [updateProgress]);
+  }, []);
 
   const buyUpgrade = useCallback((id: string) => {
     setGameState(prev => {
@@ -207,7 +157,7 @@ export function useGameState() {
       next.cps = calculateCPS(next);
       return updateProgress(next);
     });
-  }, [calculateClickPower, calculateCPS, getUpgradeCost, updateProgress]);
+  }, [calculateClickPower, calculateCPS, getUpgradeCost]);
 
   const buyUpgradeBulk = useCallback((id: string, amount: number | 'MAX') => {
     setGameState(prev => {
@@ -232,7 +182,7 @@ export function useGameState() {
       next.cps = calculateCPS(next);
       return updateProgress(next);
     });
-  }, [calculateClickPower, calculateCPS, updateProgress]);
+  }, [calculateClickPower, calculateCPS]);
 
   const buyTreeUpgrade = useCallback((
     tree: 'ascensionTree' | 'transcendenceTree' | 'eternityTree',
@@ -247,7 +197,7 @@ export function useGameState() {
       const next = { ...prev, [tree]: prev[tree].map(u => u.id === upgradeId ? { ...u, owned: u.owned + 1 } : u), [pointsKey]: (prev as any)[pointsKey] - cost };
       return updateProgress(next);
     });
-  }, [getUpgradeCost, updateProgress]);
+  }, [getUpgradeCost]);
 
   const buyPrestigeUpgrade = useCallback((id: string) => buyTreeUpgrade('ascensionTree', 'prestigePoints', id), [buyTreeUpgrade]);
   const buyAscensionUpgrade = useCallback((id: string) => buyTreeUpgrade('transcendenceTree', 'ascensionPoints', id), [buyTreeUpgrade]);
@@ -256,7 +206,7 @@ export function useGameState() {
 
   /** ---------------------------
    * Quest & Event Claiming
-   * --------------------------- */
+   --------------------------- */
   const claimQuestReward = useCallback((questId: string) => {
     setGameState(prev => {
       const quest = prev.questState.quests.find(q => q.id === questId);
@@ -272,7 +222,7 @@ export function useGameState() {
         },
       });
     });
-  }, [updateProgress]);
+  }, []);
 
   const claimEventReward = useCallback((eventId: string) => {
     setGameState(prev => {
@@ -289,11 +239,11 @@ export function useGameState() {
         },
       });
     });
-  }, [updateProgress]);
+  }, []);
 
   /** ---------------------------
    * Save / Reset / Tick Loop
-   * --------------------------- */
+   */
   const saveGame = useCallback(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...gameState, stats: { ...gameState.stats, lastOnlineTime: Date.now() } }));
   }, [gameState]);
@@ -304,6 +254,10 @@ export function useGameState() {
       setGameState(getInitialState());
     }
   }, [getInitialState]);
+
+  useEffect(() => {
+    setGameState(prev => resetPeriodicQuests(prev));
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -318,7 +272,7 @@ export function useGameState() {
       }));
     }, 100);
     return () => clearInterval(interval);
-  }, [updateProgress]);
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => saveGame(), 30000);
