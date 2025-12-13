@@ -159,29 +159,33 @@ export function useGameState() {
     return cps;
   }, []);
 
+  // Harder prestige requirements: 10M clicks per PP instead of 1M
   const calculatePrestigeGain = useCallback((state: GameState) => {
-    let gain = Math.floor(state.lifetimeClicks / 1_000_000);
+    let gain = Math.floor(state.lifetimeClicks / 10_000_000);
     state.ascensionTree.filter(a => a.owned && a.type === 'prestigeMulti')
       .forEach(a => gain *= a.effect);
     return gain;
   }, []);
 
+  // Harder ascension: need 500 total PP for first AP instead of 100
   const calculateAscensionGain = useCallback((state: GameState) => {
-    let gain = Math.floor(Math.sqrt(state.totalPrestigePoints / 100));
+    let gain = Math.floor(Math.sqrt(state.totalPrestigePoints / 500));
     state.transcendenceTree.filter(t => t.owned && t.type === 'ascensionMulti')
       .forEach(t => gain *= t.effect);
     return gain;
   }, []);
 
+  // Harder transcendence: need 250 total AP instead of 50
   const calculateTranscendenceGain = useCallback((state: GameState) => {
-    let gain = Math.floor(Math.sqrt(state.totalAscensionPoints / 50));
+    let gain = Math.floor(Math.sqrt(state.totalAscensionPoints / 250));
     state.eternityTree.filter(e => e.owned && e.type === 'transcendenceMulti')
       .forEach(e => gain *= e.effect);
     return gain;
   }, []);
 
+  // Harder eternity: need 100 total TP instead of 25
   const calculateEternityGain = useCallback((state: GameState) => {
-    return Math.floor(Math.sqrt(state.totalTranscendencePoints / 25));
+    return Math.floor(Math.sqrt(state.totalTranscendencePoints / 100));
   }, []);
 
   const getUpgradeCost = useCallback((upgrade: { baseCost: number; costMultiplier: number; owned: number }) => {

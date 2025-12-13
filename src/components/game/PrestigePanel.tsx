@@ -33,15 +33,16 @@ export function PrestigePanel({
 }: PrestigePanelProps) {
   const [activeTab, setActiveTab] = useState<TabType>('prestige');
 
-  const prestigeGain = Math.floor(gameState.lifetimeClicks / 1_000_000);
-  const ascensionGain = Math.floor(Math.sqrt(gameState.totalPrestigePoints / 100));
-  const transcendenceGain = Math.floor(Math.sqrt(gameState.totalAscensionPoints / 50));
-  const eternityGain = Math.floor(Math.sqrt(gameState.totalTranscendencePoints / 25));
+  // Harder scaling: 10M per PP, 500 PP base for AP, 250 AP base for TP, 100 TP base for EP
+  const prestigeGain = Math.floor(gameState.lifetimeClicks / 10_000_000);
+  const ascensionGain = Math.floor(Math.sqrt(gameState.totalPrestigePoints / 500));
+  const transcendenceGain = Math.floor(Math.sqrt(gameState.totalAscensionPoints / 250));
+  const eternityGain = Math.floor(Math.sqrt(gameState.totalTranscendencePoints / 100));
   
-  const clicksNeeded = 1_000_000 - (gameState.lifetimeClicks % 1_000_000);
-  const ppNeeded = Math.pow(ascensionGain + 1, 2) * 100 - gameState.totalPrestigePoints;
-  const apNeeded = Math.pow(transcendenceGain + 1, 2) * 50 - gameState.totalAscensionPoints;
-  const tpNeeded = Math.pow(eternityGain + 1, 2) * 25 - gameState.totalTranscendencePoints;
+  const clicksNeeded = 10_000_000 - (gameState.lifetimeClicks % 10_000_000);
+  const ppNeeded = Math.pow(ascensionGain + 1, 2) * 500 - gameState.totalPrestigePoints;
+  const apNeeded = Math.pow(transcendenceGain + 1, 2) * 250 - gameState.totalAscensionPoints;
+  const tpNeeded = Math.pow(eternityGain + 1, 2) * 100 - gameState.totalTranscendencePoints;
 
   const tabs: { id: TabType; label: string; icon: string; color: string }[] = [
     { id: 'prestige', label: 'Prestige', icon: '⭐', color: 'neon-yellow' },
@@ -87,7 +88,7 @@ export function PrestigePanel({
                 <span className="text-neon-yellow text-xs font-retro">PP: {formatNumber(gameState.prestigePoints)}</span>
               </div>
               <p className="text-muted-foreground text-xs mb-2">
-                Reset for <span className="text-neon-yellow font-bold">Prestige Points</span>. 1 PP per 1M clicks.
+                Reset for <span className="text-neon-yellow font-bold">Prestige Points</span>. 1 PP per 10M clicks.
               </p>
               <p className="text-xs text-muted-foreground mb-3">
                 {prestigeGain > 0 

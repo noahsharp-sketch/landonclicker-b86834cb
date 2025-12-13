@@ -1,59 +1,59 @@
 import { Upgrade, SkillNode, AscensionNode, TranscendenceNode, EternityNode, Achievement, GameState } from '../types/types';
 
 export const initialUpgrades: Upgrade[] = [
-  // Click Power Upgrades
-  { id: 'energy', name: '⚡ Energy Drink', description: '+2 click power', baseCost: 100, costMultiplier: 1.15, owned: 0, effect: 2, type: 'clickPower' },
-  { id: 'superClick', name: '👕 Quarter Zip', description: '+5 click power', baseCost: 5000, costMultiplier: 1.2, owned: 0, effect: 5, type: 'clickPower' },
-  { id: 'hot sauce', name: '🌶️ Hot Sauce', description: '+20 click power', baseCost: 20000, costMultiplier: 1.2, owned: 0, effect: 20, type: 'clickPower' },
-  { id: 'discord mod', name: '🎮 Discord Mod', description: '+100 click power', baseCost: 150000, costMultiplier: 1.2, owned: 0, effect: 100, type: 'clickPower' },
-  { id: 'macha', name: '🍵 Matcha', description: '+500 click power', baseCost: 1000000, costMultiplier: 1.2, owned: 0, effect: 500, type: 'clickPower' },
-  { id: 'quantum', name: '⚛️ Quantum Click', description: '+2000 click power', baseCost: 10000000, costMultiplier: 1.3, owned: 0, effect: 2000, type: 'clickPower' },
-  // Auto Clickers
-  { id: 'sean', name: "💜 Sean's Love", description: '+1 auto-clicker', baseCost: 1000, costMultiplier: 1.15, owned: 0, effect: 1, type: 'autoClicker' },
-  { id: 'megaAuto', name: "💕 Benicio's Love", description: '+5 auto-clickers', baseCost: 10000, costMultiplier: 1.2, owned: 0, effect: 5, type: 'autoClicker' },
-  { id: 'Evil Ben G', name: '😈 Evil Ben G', description: '+10 auto-clickers', baseCost: 100000, costMultiplier: 1.2, owned: 0, effect: 10, type: 'autoClicker' },
-  { id: 'robot', name: '🤖 Robot Helper', description: '+50 auto-clickers', baseCost: 2000000, costMultiplier: 1.25, owned: 0, effect: 50, type: 'autoClicker' },
-  { id: 'hivemind', name: '🧠 Hivemind', description: '+200 auto-clickers', baseCost: 50000000, costMultiplier: 1.3, owned: 0, effect: 200, type: 'autoClicker' },
+  // Click Power Upgrades - higher costs, steeper scaling
+  { id: 'energy', name: '⚡ Energy Drink', description: '+1 click power', baseCost: 50, costMultiplier: 1.25, owned: 0, effect: 1, type: 'clickPower' },
+  { id: 'superClick', name: '👕 Quarter Zip', description: '+3 click power', baseCost: 500, costMultiplier: 1.3, owned: 0, effect: 3, type: 'clickPower' },
+  { id: 'hot sauce', name: '🌶️ Hot Sauce', description: '+10 click power', baseCost: 5000, costMultiplier: 1.35, owned: 0, effect: 10, type: 'clickPower' },
+  { id: 'discord mod', name: '🎮 Discord Mod', description: '+50 click power', baseCost: 100000, costMultiplier: 1.4, owned: 0, effect: 50, type: 'clickPower' },
+  { id: 'macha', name: '🍵 Matcha', description: '+250 click power', baseCost: 5000000, costMultiplier: 1.45, owned: 0, effect: 250, type: 'clickPower' },
+  { id: 'quantum', name: '⚛️ Quantum Click', description: '+1000 click power', baseCost: 100000000, costMultiplier: 1.5, owned: 0, effect: 1000, type: 'clickPower' },
+  // Auto Clickers - reduced effects, higher costs
+  { id: 'sean', name: "💜 Sean's Love", description: '+1 auto-clicker', baseCost: 200, costMultiplier: 1.2, owned: 0, effect: 1, type: 'autoClicker' },
+  { id: 'megaAuto', name: "💕 Benicio's Love", description: '+2 auto-clickers', baseCost: 5000, costMultiplier: 1.3, owned: 0, effect: 2, type: 'autoClicker' },
+  { id: 'Evil Ben G', name: '😈 Evil Ben G', description: '+5 auto-clickers', baseCost: 150000, costMultiplier: 1.35, owned: 0, effect: 5, type: 'autoClicker' },
+  { id: 'robot', name: '🤖 Robot Helper', description: '+15 auto-clickers', baseCost: 10000000, costMultiplier: 1.4, owned: 0, effect: 15, type: 'autoClicker' },
+  { id: 'hivemind', name: '🧠 Hivemind', description: '+50 auto-clickers', baseCost: 500000000, costMultiplier: 1.45, owned: 0, effect: 50, type: 'autoClicker' },
 ];
 
 export const initialSkillTree: SkillNode[] = [
-  { id: 'a', name: '⚡ Click Fury', description: 'Doubles all click power. Your clicks become twice as powerful!', cost: 1, owned: false, effect: 2, type: 'clickMulti' },
-  { id: 'b', name: '🚀 Auto Boost', description: 'Multiplies auto-clicker speed by 1.5x. More clicks per second!', cost: 2, owned: false, effect: 1.5, type: 'cpsBoost' },
-  { id: 'c', name: '💎 CPS Multi', description: 'Triples your clicks per second. Massive passive income boost!', cost: 3, owned: false, effect: 3, type: 'cpsMulti' },
-  { id: 'd', name: '💰 Bargain Hunter', description: 'Reduces all upgrade costs by 15%. Shop smarter!', cost: 2, owned: false, effect: 0.85, type: 'costReduction' },
-  { id: 'e', name: '🎁 Head Start', description: 'Start each prestige with 10,000 clicks. Jump ahead!', cost: 3, owned: false, effect: 10000, type: 'startingClicks' },
-  { id: 'f', name: '🔥 Click Mastery', description: 'Additional 3x click power multiplier. Click like a master!', cost: 5, owned: false, effect: 3, type: 'clickMulti' },
-  { id: 'g', name: '⚡ Hyper CPS', description: 'Additional 2x CPS multiplier. Supercharge your auto-clickers!', cost: 5, owned: false, effect: 2, type: 'cpsBoost' },
+  { id: 'a', name: '⚡ Click Fury', description: '1.5x click power', cost: 2, owned: false, effect: 1.5, type: 'clickMulti' },
+  { id: 'b', name: '🚀 Auto Boost', description: '1.25x auto-clicker speed', cost: 3, owned: false, effect: 1.25, type: 'cpsBoost' },
+  { id: 'c', name: '💎 CPS Multi', description: '1.5x clicks per second', cost: 5, owned: false, effect: 1.5, type: 'cpsMulti' },
+  { id: 'd', name: '💰 Bargain Hunter', description: 'Reduces upgrade costs by 10%', cost: 4, owned: false, effect: 0.9, type: 'costReduction' },
+  { id: 'e', name: '🎁 Head Start', description: 'Start prestige with 1,000 clicks', cost: 5, owned: false, effect: 1000, type: 'startingClicks' },
+  { id: 'f', name: '🔥 Click Mastery', description: '2x click power multiplier', cost: 10, owned: false, effect: 2, type: 'clickMulti' },
+  { id: 'g', name: '⚡ Hyper CPS', description: '1.5x CPS multiplier', cost: 10, owned: false, effect: 1.5, type: 'cpsBoost' },
 ];
 
 export const initialAscensionTree: AscensionNode[] = [
-  { id: 'asc1', name: '⭐ Prestige Master', description: 'Double prestige point gains. Prestige faster!', cost: 1, owned: false, effect: 2, type: 'prestigeMulti' },
-  { id: 'asc2', name: '🌟 Universal Power', description: 'Triple ALL production. Everything is boosted!', cost: 2, owned: false, effect: 3, type: 'allMulti' },
-  { id: 'asc3', name: '🚀 Ultimate Clicker', description: '3.5x auto-clicker multiplier. Maximum automation!', cost: 3, owned: false, effect: 3.5, type: 'ultimateCPS' },
-  { id: 'asc4', name: '💎 Super Savings', description: 'Reduce all costs by 25%. Even better deals!', cost: 2, owned: false, effect: 0.75, type: 'superCost' },
-  { id: 'asc5', name: '🎯 Mega Start', description: 'Start with 1M clicks after prestige. Incredible head start!', cost: 4, owned: false, effect: 1000000, type: 'megaStart' },
-  { id: 'asc6', name: '🔮 Prestige Surge', description: 'Additional 3x prestige gain. Prestige like never before!', cost: 5, owned: false, effect: 3, type: 'prestigeMulti' },
-  { id: 'asc7', name: '🌌 Cosmic Power', description: '5x ALL production. Cosmic level boost!', cost: 8, owned: false, effect: 5, type: 'allMulti' },
+  { id: 'asc1', name: '⭐ Prestige Master', description: '1.5x prestige point gains', cost: 2, owned: false, effect: 1.5, type: 'prestigeMulti' },
+  { id: 'asc2', name: '🌟 Universal Power', description: '2x ALL production', cost: 4, owned: false, effect: 2, type: 'allMulti' },
+  { id: 'asc3', name: '🚀 Ultimate Clicker', description: '2x auto-clicker multiplier', cost: 5, owned: false, effect: 2, type: 'ultimateCPS' },
+  { id: 'asc4', name: '💎 Super Savings', description: 'Reduce all costs by 15%', cost: 4, owned: false, effect: 0.85, type: 'superCost' },
+  { id: 'asc5', name: '🎯 Mega Start', description: 'Start with 100K clicks after prestige', cost: 8, owned: false, effect: 100000, type: 'megaStart' },
+  { id: 'asc6', name: '🔮 Prestige Surge', description: '2x prestige gain', cost: 10, owned: false, effect: 2, type: 'prestigeMulti' },
+  { id: 'asc7', name: '🌌 Cosmic Power', description: '3x ALL production', cost: 15, owned: false, effect: 3, type: 'allMulti' },
 ];
 
 export const initialTranscendenceTree: TranscendenceNode[] = [
-  { id: 'trans1', name: '🌌 Cosmic Genesis', description: '10x ALL production permanently. Reality bends to your will!', cost: 1, owned: false, effect: 10, type: 'globalMulti' },
-  { id: 'trans2', name: '✨ Ascension Mastery', description: '5x Ascension Point gains. Ascend like a god!', cost: 2, owned: false, effect: 5, type: 'ascensionMulti' },
-  { id: 'trans3', name: '♾️ Infinite Power', description: '100x click power. Your clicks shake the universe!', cost: 3, owned: false, effect: 100, type: 'infinitePower' },
-  { id: 'trans4', name: '🌠 Cosmic Start', description: 'Start with 1B clicks after any reset. Time is meaningless!', cost: 4, owned: false, effect: 1000000000, type: 'cosmicStart' },
-  { id: 'trans5', name: '🔮 Eternity Boost', description: '50x CPS multiplier. Your auto-clickers transcend time!', cost: 5, owned: false, effect: 50, type: 'eternityBoost' },
-  { id: 'trans6', name: '💫 Universal Mastery', description: '25x ALL production. Master of all realities!', cost: 8, owned: false, effect: 25, type: 'globalMulti' },
-  { id: 'trans7', name: '🌀 Omnipotence', description: '1000x click power. Become one with infinity!', cost: 15, owned: false, effect: 1000, type: 'infinitePower' },
+  { id: 'trans1', name: '🌌 Cosmic Genesis', description: '5x ALL production permanently', cost: 2, owned: false, effect: 5, type: 'globalMulti' },
+  { id: 'trans2', name: '✨ Ascension Mastery', description: '2x Ascension Point gains', cost: 4, owned: false, effect: 2, type: 'ascensionMulti' },
+  { id: 'trans3', name: '♾️ Infinite Power', description: '10x click power', cost: 6, owned: false, effect: 10, type: 'infinitePower' },
+  { id: 'trans4', name: '🌠 Cosmic Start', description: 'Start with 10M clicks after reset', cost: 10, owned: false, effect: 10000000, type: 'cosmicStart' },
+  { id: 'trans5', name: '🔮 Eternity Boost', description: '5x CPS multiplier', cost: 12, owned: false, effect: 5, type: 'eternityBoost' },
+  { id: 'trans6', name: '💫 Universal Mastery', description: '10x ALL production', cost: 18, owned: false, effect: 10, type: 'globalMulti' },
+  { id: 'trans7', name: '🌀 Omnipotence', description: '50x click power', cost: 30, owned: false, effect: 50, type: 'infinitePower' },
 ];
 
 export const initialEternityTree: EternityNode[] = [
-  { id: 'eter1', name: '🕳️ Void Mastery', description: '1000x ALL production. The void empowers you!', cost: 1, owned: false, effect: 1000, type: 'omnipotent' },
-  { id: 'eter2', name: '⏳ Timeless', description: '10x Transcendence gains. Time flows for you alone!', cost: 2, owned: false, effect: 10, type: 'transcendenceMulti' },
-  { id: 'eter3', name: '🌊 Infinite Automation', description: '10000x auto-clicker power. Armies click for you!', cost: 3, owned: false, effect: 10000, type: 'infiniteAuto' },
-  { id: 'eter4', name: '🔱 Reality Anchor', description: '1T starting clicks after any reset. Begin with power!', cost: 5, owned: false, effect: 1000000000000, type: 'beyondReality' },
-  { id: 'eter5', name: '💠 Dimensional Rift', description: '100000x click power. Each click creates universes!', cost: 8, owned: false, effect: 100000, type: 'omnipotent' },
-  { id: 'eter6', name: '🌟 Eternal Flame', description: '50x Transcendence gains. Burn through realities!', cost: 12, owned: false, effect: 50, type: 'transcendenceMulti' },
-  { id: 'eter7', name: '♾️ True Infinity', description: '1000000x ALL production. You ARE the game!', cost: 25, owned: false, effect: 1000000, type: 'omnipotent' },
+  { id: 'eter1', name: '🕳️ Void Mastery', description: '25x ALL production', cost: 3, owned: false, effect: 25, type: 'omnipotent' },
+  { id: 'eter2', name: '⏳ Timeless', description: '3x Transcendence gains', cost: 5, owned: false, effect: 3, type: 'transcendenceMulti' },
+  { id: 'eter3', name: '🌊 Infinite Automation', description: '100x auto-clicker power', cost: 8, owned: false, effect: 100, type: 'infiniteAuto' },
+  { id: 'eter4', name: '🔱 Reality Anchor', description: '1B starting clicks after reset', cost: 15, owned: false, effect: 1000000000, type: 'beyondReality' },
+  { id: 'eter5', name: '💠 Dimensional Rift', description: '500x click power', cost: 25, owned: false, effect: 500, type: 'omnipotent' },
+  { id: 'eter6', name: '🌟 Eternal Flame', description: '10x Transcendence gains', cost: 40, owned: false, effect: 10, type: 'transcendenceMulti' },
+  { id: 'eter7', name: '♾️ True Infinity', description: '1000x ALL production', cost: 75, owned: false, effect: 1000, type: 'omnipotent' },
 ];
 
 export function createInitialAchievements(): Achievement[] {
