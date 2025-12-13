@@ -135,7 +135,7 @@ export function useGameState() {
   , []);
 
   /** ---------------------------
-   * Old-style Quest / Achievement Tracking
+   * Quest / Achievement Tracking
    * --------------------------- */
   const checkQuestProgress = useCallback((state: GameState): GameState => {
     const getStat = (type: string) => {
@@ -167,7 +167,47 @@ export function useGameState() {
       return { ...c, current, completed: current >= c.target };
     });
 
-    return { ...state, questState: { ...state.questState, quests: updatedQuests, challenges: updatedChallenges } };
+    const updatedEvents = state.questState.events.map(e => {
+      const current = getStat(e.type || e.id);
+      const completed = current >= (e.target || 1);
+      return { ...e, current, completed };
+    });
+
+    return { ...state, questState: { ...state.questState, quests: updatedQuests, challenges: updatedChallenges, events: updatedEvents } };
+  }, []);
+
+  const claimQuestReward = useCallback((questId: string) => {
+    setGameState(prev => {
+      const quest = prev.questState.quests.find(q => q.id === questId);
+      if (!quest || quest.claimed || !quest.completed) return prev;
+      return {
+        ...prev,
+        clicks: prev.clicks + (quest.rewards.clicks || 0),
+        prestigePoints: prev.prestigePoints + (quest.rewards.prestigePoints || 0),
+        ascensionPoints: prev.ascensionPoints + (quest.rewards.ascensionPoints || 0),
+        questState: {
+          ...prev.questState,
+          quests: prev.questState.quests.map(q => q.id === questId ? { ...q, claimed: true } : q),
+        },
+      };
+    });
+  }, []);
+
+  const claimEventReward = useCallback((eventId: string) => {
+    setGameState(prev => {
+      const event = prev.questState.events.find(e => e.id === eventId);
+      if (!event || event.claimed || !event.completed) return prev;
+      return {
+        ...prev,
+        clicks: prev.clicks + (event.rewards.clicks || 0),
+        prestigePoints: prev.prestigePoints + (event.rewards.prestigePoints || 0),
+        ascensionPoints: prev.ascensionPoints + (event.rewards.ascensionPoints || 0),
+        questState: {
+          ...prev.questState,
+          events: prev.questState.events.map(e => e.id === eventId ? { ...e, claimed: true } : e),
+        },
+      };
+    });
   }, []);
 
   /** ---------------------------
@@ -218,55 +258,54 @@ export function useGameState() {
   }, [calculateClickPower, calculateCPS]);
 
   /** ---------------------------
-   * Prestige/Ascension/Transcend/Eternity Upgrades
-   * (OLD STYLE BUYING)
+   * Prestige / Ascension / Transcend / Eternity Purchases
    * --------------------------- */
-  const buyPrestigeUpgrade = useCallback((id: string) => {
+  const buyPrestigeUpgrade = useCallback((upgradeId: string) => {
     setGameState(prev => {
-      const upgrade = prev.upgrades.find(u => u.id === id);
+      const upgrade = prev.ascensionTree.find(u => u.id === upgradeId);
       if (!upgrade) return prev;
-      const cost = Math.floor(upgrade.baseCost * Math.pow(upgrade.costMultiplier, upgrade.owned));
+      const cost = getUpgradeCost(upgrade);
       if (prev.prestigePoints < cost) return prev;
-      const newUpgrades = prev.upgrades.map(u => u.id === id ? { ...u, owned: u.owned + 1 } : u);
-      return { ...prev, upgrades: newUpgrades, prestigePoints: prev.prestigePoints - cost };
+      const newTree = prev.ascensionTree.map(u => u.id === upgradeId ? { ...u, owned: u.owned + 1 } : u);
+      return { ...prev, ascensionTree: newTree, prestigePoints: prev.prestigePoints - cost };
     });
-  }, []);
+  }, [getUpgradeCost]);
 
-  const buyAscensionUpgrade = useCallback((id: string) => {
+  const buyAscensionUpgrade = useCallback((upgradeId: string) => {
     setGameState(prev => {
-      const upgrade = prev.upgrades.find(u => u.id === id);
+      const upgrade = prev.transcendenceTree.find(u => u.id === upgradeId);
       if (!upgrade) return prev;
-      const cost = Math.floor(upgrade.baseCost * Math.pow(upgrade.costMultiplier, upgrade.owned));
+      const cost = getUpgradeCost(upgrade);
       if (prev.ascensionPoints < cost) return prev;
-      const newUpgrades = prev.upgrades.map(u => u.id === id ? { ...u, owned: u.owned + 1 } : u);
-      return { ...prev, upgrades: newUpgrades, ascensionPoints: prev.ascensionPoints - cost };
+      const newTree = prev.transcendenceTree.map(u => u.id === upgradeId ? { ...u, owned: u.owned + 1 } : u);
+      return { ...prev, transcendenceTree: newTree, ascensionPoints: prev.ascensionPoints - cost };
     });
-  }, []);
+  }, [getUpgradeCost]);
 
-  const buyTranscendenceUpgrade = useCallback((id: string) => {
+  const buyTranscendenceUpgrade = useCallback((upgradeId: string) => {
     setGameState(prev => {
-      const upgrade = prev.upgrades.find(u => u.id === id);
+      const upgrade = prev.eternityTree.find(u => u.id === upgradeId);
       if (!upgrade) return prev;
-      const cost = Math.floor(upgrade.baseCost * Math.pow(upgrade.costMultiplier, upgrade.owned));
+      const cost = getUpgradeCost(upgrade);
       if (prev.transcendencePoints < cost) return prev;
-      const newUpgrades = prev.upgrades.map(u => u.id === id ? { ...u, owned: u.owned + 1 } : u);
-      return { ...prev, upgrades: newUpgrades, transcendencePoints: prev.transcendencePoints - cost };
+      const newTree = prev.eternityTree.map(u => u.id === upgradeId ? { ...u, owned: u.owned + 1 } : u);
+      return { ...prev, eternityTree: newTree, transcendencePoints: prev.transcendencePoints - cost };
     });
-  }, []);
+  }, [getUpgradeCost]);
 
-  const buyEternityUpgrade = useCallback((id: string) => {
+  const buyEternityUpgrade = useCallback((upgradeId: string) => {
     setGameState(prev => {
-      const upgrade = prev.upgrades.find(u => u.id === id);
+      const upgrade = prev.eternityTree.find(u => u.id === upgradeId);
       if (!upgrade) return prev;
-      const cost = Math.floor(upgrade.baseCost * Math.pow(upgrade.costMultiplier, upgrade.owned));
+      const cost = getUpgradeCost(upgrade);
       if (prev.eternityPoints < cost) return prev;
-      const newUpgrades = prev.upgrades.map(u => u.id === id ? { ...u, owned: u.owned + 1 } : u);
-      return { ...prev, upgrades: newUpgrades, eternityPoints: prev.eternityPoints - cost };
+      const newTree = prev.eternityTree.map(u => u.id === upgradeId ? { ...u, owned: u.owned + 1 } : u);
+      return { ...prev, eternityTree: newTree, eternityPoints: prev.eternityPoints - cost };
     });
-  }, []);
+  }, [getUpgradeCost]);
 
   /** ---------------------------
-   * Save / Reset
+   * Save / Reset / Auto Loop
    * --------------------------- */
   const saveGame = useCallback(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...gameState, stats: { ...gameState.stats, lastOnlineTime: Date.now() } }));
@@ -279,9 +318,6 @@ export function useGameState() {
     }
   }, [getInitialState]);
 
-  /** ---------------------------
-   * Auto Loop
-   * --------------------------- */
   useEffect(() => {
     const interval = setInterval(() => {
       const now = Date.now();
@@ -311,6 +347,8 @@ export function useGameState() {
     buyAscensionUpgrade,
     buyTranscendenceUpgrade,
     buyEternityUpgrade,
+    claimQuestReward,
+    claimEventReward,
     resetGame,
     saveGame,
   };
