@@ -1,121 +1,69 @@
-import React, { useState } from "react";
-import { useGameState } from "../hooks/useGameState";
+import React from 'react';
+import { useGameState } from '../hooks/useGameState';
+import type { Upgrade } from '../data/gameData';
 
-export default function UpgradePanel() {
-  const { gameState, buyUpgrade, getUpgradeCost } = useGameState();
-  const [bulkAmount, setBulkAmount] = useState(1);
+export function UpgradePanel() {
+  const { gameState, buyUpgrade, buyUpgradeBulk, getUpgradeCost } = useGameState();
 
-  const bulkOptions = [1, 10, 25, 100, "MAX"] as const;
-
-  // Calculate total bulk cost
-  const getBulkCost = (upgrade) => {
-    let total = 0;
+  // Helper: calculate max affordable
+  function maxAffordable(upgrade: Upgrade) {
     let owned = upgrade.owned;
-
-    if (bulkAmount === "MAX") {
-      let clicks = gameState.clicks;
-      while (clicks >= Math.floor(upgrade.baseCost * Math.pow(upgrade.costMultiplier, owned))) {
-        const nextCost = Math.floor(
-          upgrade.baseCost * Math.pow(upgrade.costMultiplier, owned)
-        );
-        total += nextCost;
-        clicks -= nextCost;
-        owned++;
-      }
-      return total;
-    }
-
-    for (let i = 0; i < bulkAmount; i++) {
-      const cost = Math.floor(
-        upgrade.baseCost * Math.pow(upgrade.costMultiplier, owned)
-      );
-      total += cost;
+    let clicks = gameState.clicks;
+    let total = 0;
+    let cost = Math.floor(upgrade.baseCost * Math.pow(upgrade.costMultiplier, owned));
+    while (clicks >= cost) {
+      clicks -= cost;
       owned++;
+      total++;
+      cost = Math.floor(upgrade.baseCost * Math.pow(upgrade.costMultiplier, owned));
     }
     return total;
-  };
-
-  const canAfford = (upgrade) => {
-    return gameState.clicks >= getBulkCost(upgrade);
-  };
-
-  const handleBulkBuy = (upgrade) => {
-    if (!canAfford(upgrade)) return;
-
-    if (bulkAmount === "MAX") {
-      // Keep buying until broke
-      while (gameState.clicks >= getUpgradeCost(upgrade)) {
-        buyUpgrade(upgrade.id);
-      }
-      return;
-    }
-
-    for (let i = 0; i < bulkAmount; i++) {
-      if (gameState.clicks >= getUpgradeCost(upgrade)) {
-        buyUpgrade(upgrade.id);
-      }
-    }
-  };
+  }
 
   return (
-    <div style={{ padding: 20 }}>
-      <h2 className="text-xl font-bold mb-3">Upgrades</h2>
-
-      {/* Bulk Buttons */}
-      <div className="flex gap-2 mb-4">
-        {bulkOptions.map((opt) => (
-          <button
-            key={opt}
-            className={`px-3 py-1 rounded ${
-              bulkAmount === opt
-                ? "bg-blue-600 text-white"
-                : "bg-gray-300 text-black"
-            }`}
-            onClick={() => setBulkAmount(opt)}
-          >
-            {opt}
-          </button>
-        ))}
-      </div>
-
-      {/* Upgrades List */}
-      <div className="flex flex-col gap-4">
-        {gameState.upgrades.map((upgrade) => {
-          const cost = getBulkCost(upgrade);
-
+    <div className="upgrade-panel">
+      <h2>Upgrades</h2>
+      <ul>
+        {gameState.upgrades.map(upgrade => {
+          const cost = getUpgradeCost(upgrade);
+          const canAfford = gameState.clicks >= cost;
+          const maxBuy = maxAffordable(upgrade);
           return (
-            <div
-              key={upgrade.id}
-              className="p-3 border rounded bg-gray-100 shadow-sm flex justify-between"
-            >
-              <div>
-                <div className="text-lg font-semibold">{upgrade.name}</div>
-                <div className="text-sm text-gray-600">
-                  {upgrade.description}
-                </div>
-                <div className="text-sm text-gray-800 mt-1">
-                  Owned: {upgrade.owned}
-                </div>
-                <div className="text-sm mt-1">
-                  Bulk Cost: <strong>{Math.floor(cost)}</strong>
-                </div>
-              </div>
+            <li key={upgrade.id} className="upgrade-item">
+              <h3>{upgrade.name}</h3>
+              <p>{upgrade.description}</p>
+              <p>Owned: {upgrade.owned}</p>
+              <p>Cost: {cost.toLocaleString()}</p>
 
-              <button
-                onClick={() => handleBulkBuy(upgrade)}
-                disabled={!canAfford(upgrade)}
-                className={`px-4 py-2 rounded font-bold self-center ${
-                  canAfford(upgrade)
-                    ? "bg-green-500 text-white hover:bg-green-600"
-                    : "bg-gray-400 text-gray-700 cursor-not-allowed"
-                }`}
-              >
-                Buy {bulkAmount === "MAX" ? "Max" : `${bulkAmount}×`}
-              </button>
-            </div>
+              <div className="buttons">
+                {/* Single purchase */}
+                <button
+                  disabled={!canAfford}
+                  onClick={() => buyUpgrade(upgrade.id)}
+                >
+                  Buy 1
+                </button>
+
+                {/* Buy 10 */}
+                <button
+                  disabled={gameState.clicks < getUpgradeCost({ ...upgrade, owned: upgrade.owned + 9 })}
+                  onClick={() => buyUpgradeBulk(upgrade.id, 10)}
+                >
+                  Buy 10
+                </button>
+
+                {/* Buy MAX */}
+                <button
+                  disabled={maxBuy === 0}
+                  onClick={() => buyUpgradeBulk(upgrade.id, 'MAX')}
+                >
+                  Buy MAX ({maxBuy})
+                </button>
+              </div>
+            </li>
           );
         })}
-      </div>
+      </ul>
     </div>
   );
 }
