@@ -74,12 +74,17 @@ export function useGameState() {
       const lastOnline = saved.stats?.lastOnlineTime || Date.now();
       const offlineSeconds = Math.min((Date.now() - lastOnline) / 1000, 86400);
       const offlineClicks = Math.floor((saved.cps || 0) * offlineSeconds * 0.5);
+
       if (offlineClicks > 0) {
         setOfflineEarnings(offlineClicks);
+
         setTimeout(() => setOfflineEarnings(null), 5000);
       }
 
-      return {
+      const mergedAchievements = mergeArrayById(saved.achievements || [], fresh.achievements)
+        .map(a => ({ ...a, current: a.current || 0, completed: !!a.completed }));
+
+      const initialState = {
         ...fresh,
         ...saved,
         clicks: (saved.clicks || 0) + offlineClicks,
@@ -89,7 +94,7 @@ export function useGameState() {
         ascensionTree: mergeArrayById(saved.ascensionTree || [], fresh.ascensionTree),
         transcendenceTree: mergeArrayById(saved.transcendenceTree || [], fresh.transcendenceTree),
         eternityTree: mergeArrayById(saved.eternityTree || [], fresh.eternityTree),
-        achievements: mergeArrayById(saved.achievements || [], fresh.achievements),
+        achievements: mergedAchievements,
         questState: {
           ...fresh.questState,
           ...saved.questState,
@@ -101,6 +106,8 @@ export function useGameState() {
           lastOnlineTime: Date.now(),
         },
       };
+
+      return initialState;
     } catch {
       return getInitialState();
     }
@@ -134,21 +141,19 @@ export function useGameState() {
   , []);
 
   /** ---------------------------
-   * Unified Progress Tracking
+   * Unified Progress Tracking (Dynamic)
    * --------------------------- */
   const getStat = useCallback((state: GameState, type: string) => {
-    switch (type) {
-      case 'clicks': return state.clicks;
-      case 'lifetimeClicks': return state.lifetimeClicks;
-      case 'cps': return state.cps;
-      case 'clickPower': return state.clickPower;
-      case 'upgrades': return state.upgrades.reduce((sum, u) => sum + u.owned, 0);
-      case 'prestiges': return state.totalPrestiges;
-      case 'ascensions': return state.totalAscensions;
-      case 'transcendences': return state.totalTranscendences;
-      case 'eternities': return state.totalEternities;
-      default: return 0;
-    }
+    if (type in state) return (state as any)[type];
+    if (type in state.stats) return (state.stats as any)[type];
+
+    if (type === 'upgrades') return state.upgrades.reduce((sum, u) => sum + u.owned, 0);
+    if (type === 'prestiges') return state.totalPrestiges;
+    if (type === 'ascensions') return state.totalAscensions;
+    if (type === 'transcendences') return state.totalTranscendences;
+    if (type === 'eternities') return state.totalEternities;
+
+    return 0;
   }, []);
 
   const updateGameProgress = useCallback((state: GameState): GameState => {
@@ -176,6 +181,7 @@ export function useGameState() {
     const updatedAchievements = state.achievements.map(a => {
       if (a.completed) return a;
       const current = getStat(state, a.type || '');
+      if (!a.completed && current >= a.target) console.log(`Achievement unlocked: ${a.id}`);
       return { ...a, current, completed: current >= a.target };
     });
 
@@ -191,7 +197,11 @@ export function useGameState() {
    * --------------------------- */
   const handleClick = useCallback(() => {
     setGameState(prev => {
-      const next = { ...prev, clicks: prev.clicks + prev.clickPower, lifetimeClicks: prev.lifetimeClicks + prev.clickPower };
+      const next = {
+        ...prev,
+        clicks: prev.clicks + prev.clickPower,
+        lifetimeClicks: prev.lifetimeClicks + prev.clickPower,
+      };
       return updateGameProgress(next);
     });
   }, [updateGameProgress]);
@@ -237,7 +247,6 @@ export function useGameState() {
     });
   }, [calculateClickPower, calculateCPS, updateGameProgress]);
 
-  // Generic tree upgrade function
   const buyTreeUpgrade = useCallback((
     tree: 'ascensionTree' | 'transcendenceTree' | 'eternityTree',
     pointsKey: 'prestigePoints' | 'ascensionPoints' | 'transcendencePoints' | 'eternityPoints',
@@ -249,9 +258,9 @@ export function useGameState() {
       const cost = getUpgradeCost(upgrade);
       if ((prev as any)[pointsKey] < cost) return prev;
       const newTree = prev[tree].map(u => u.id === upgradeId ? { ...u, owned: u.owned + 1 } : u);
-      return { ...prev, [tree]: newTree, [pointsKey]: (prev as any)[pointsKey] - cost };
+      return updateGameProgress({ ...prev, [tree]: newTree, [pointsKey]: (prev as any)[pointsKey] - cost });
     });
-  }, [getUpgradeCost]);
+  }, [getUpgradeCost, updateGameProgress]);
 
   const buyPrestigeUpgrade = useCallback((id: string) => buyTreeUpgrade('ascensionTree', 'prestigePoints', id), [buyTreeUpgrade]);
   const buyAscensionUpgrade = useCallback((id: string) => buyTreeUpgrade('transcendenceTree', 'ascensionPoints', id), [buyTreeUpgrade]);
@@ -265,7 +274,7 @@ export function useGameState() {
     setGameState(prev => {
       const quest = prev.questState.quests.find(q => q.id === questId);
       if (!quest || quest.claimed || !quest.completed) return prev;
-      return {
+      return updateGameProgress({
         ...prev,
         clicks: prev.clicks + (quest.rewards.clicks || 0),
         prestigePoints: prev.prestigePoints + (quest.rewards.prestigePoints || 0),
@@ -274,15 +283,15 @@ export function useGameState() {
           ...prev.questState,
           quests: prev.questState.quests.map(q => q.id === questId ? { ...q, claimed: true } : q),
         },
-      };
+      });
     });
-  }, []);
+  }, [updateGameProgress]);
 
   const claimEventReward = useCallback((eventId: string) => {
     setGameState(prev => {
       const event = prev.questState.events.find(e => e.id === eventId);
       if (!event || event.claimed || !event.completed) return prev;
-      return {
+      return updateGameProgress({
         ...prev,
         clicks: prev.clicks + (event.rewards.clicks || 0),
         prestigePoints: prev.prestigePoints + (event.rewards.prestigePoints || 0),
@@ -291,9 +300,9 @@ export function useGameState() {
           ...prev.questState,
           events: prev.questState.events.map(e => e.id === eventId ? { ...e, claimed: true } : e),
         },
-      };
+      });
     });
-  }, []);
+  }, [updateGameProgress]);
 
   /** ---------------------------
    * Save / Reset / Tick Loop
@@ -316,7 +325,12 @@ export function useGameState() {
       lastTickRef.current = now;
 
       setGameState(prev => {
-        const next = { ...prev, clicks: prev.clicks + prev.cps * delta, lifetimeClicks: prev.lifetimeClicks + prev.cps * delta };
+        const autoClicks = prev.cps * delta;
+        const next = {
+          ...prev,
+          clicks: prev.clicks + autoClicks,
+          lifetimeClicks: prev.lifetimeClicks + autoClicks,
+        };
         return updateGameProgress(next);
       });
     }, 100);
