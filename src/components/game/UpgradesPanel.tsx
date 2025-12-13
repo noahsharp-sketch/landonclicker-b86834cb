@@ -10,9 +10,15 @@ interface UpgradesPanelProps {
 }
 
 type BulkAmount = 1 | 10 | 25 | 100 | "MAX";
+type TabType = 'power' | 'auto';
 
 export function UpgradesPanel({ gameState, onBuyUpgrade, onBuyUpgradeBulk, playPurchase }: UpgradesPanelProps) {
   const [bulkAmount, setBulkAmount] = useState<BulkAmount>(1);
+  const [activeTab, setActiveTab] = useState<TabType>('power');
+
+  const powerUpgrades = gameState.upgrades.filter(u => u.type === 'clickPower');
+  const autoUpgrades = gameState.upgrades.filter(u => u.type === 'autoClicker');
+  const displayedUpgrades = activeTab === 'power' ? powerUpgrades : autoUpgrades;
 
   const getUpgradeCost = (upgrade: Upgrade) => {
     return Math.floor(upgrade.baseCost * Math.pow(upgrade.costMultiplier, upgrade.owned));
@@ -65,7 +71,33 @@ export function UpgradesPanel({ gameState, onBuyUpgrade, onBuyUpgradeBulk, playP
   return (
     <div className="h-full flex flex-col">
       <div className="p-3 border-b border-primary/50">
-        <h2 className="text-primary font-retro text-xs mb-2 neon-text">UPGRADES</h2>
+        {/* Tab Selector */}
+        <div className="flex gap-2 mb-3">
+          <button
+            onClick={() => setActiveTab('power')}
+            className={`
+              flex-1 px-3 py-2 text-xs font-retro rounded transition-all
+              ${activeTab === 'power' 
+                ? 'bg-neon-yellow text-background' 
+                : 'bg-muted text-muted-foreground hover:bg-muted/80'
+              }
+            `}
+          >
+            ⚡ POWER
+          </button>
+          <button
+            onClick={() => setActiveTab('auto')}
+            className={`
+              flex-1 px-3 py-2 text-xs font-retro rounded transition-all
+              ${activeTab === 'auto' 
+                ? 'bg-neon-purple text-background' 
+                : 'bg-muted text-muted-foreground hover:bg-muted/80'
+              }
+            `}
+          >
+            🤖 AUTO
+          </button>
+        </div>
         
         {/* Bulk Purchase Selector */}
         <div className="flex gap-1 flex-wrap">
@@ -88,11 +120,12 @@ export function UpgradesPanel({ gameState, onBuyUpgrade, onBuyUpgradeBulk, playP
       </div>
       
       <div className="flex-1 overflow-y-auto p-2 space-y-2">
-        {gameState.upgrades.map((upgrade) => {
+        {displayedUpgrades.map((upgrade) => {
           const cost = getBulkCost(upgrade, bulkAmount);
           const canAfford = gameState.clicks >= cost;
           const maxBuy = getMaxAffordable(upgrade);
           const displayAmount = bulkAmount === "MAX" ? maxBuy : bulkAmount;
+          const borderColor = activeTab === 'power' ? 'border-neon-yellow' : 'border-neon-purple';
           
           return (
             <button
@@ -102,7 +135,7 @@ export function UpgradesPanel({ gameState, onBuyUpgrade, onBuyUpgradeBulk, playP
               className={`
                 w-full text-left p-3 rounded-lg transition-all border
                 ${canAfford && (bulkAmount !== "MAX" || maxBuy > 0)
-                  ? 'border-primary hover:scale-[1.02] bg-card hover:bg-card/80' 
+                  ? `${borderColor} hover:scale-[1.02] bg-card hover:bg-card/80` 
                   : 'border-muted/30 opacity-50 cursor-not-allowed bg-muted/20'
                 }
               `}

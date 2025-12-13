@@ -1,16 +1,19 @@
-import { Upgrade, SkillNode, AscensionNode, TranscendenceNode, Achievement, GameState } from '../types/types';
+import { Upgrade, SkillNode, AscensionNode, TranscendenceNode, EternityNode, Achievement, GameState } from '../types/types';
 
 export const initialUpgrades: Upgrade[] = [
+  // Click Power Upgrades
   { id: 'energy', name: '⚡ Energy Drink', description: '+2 click power', baseCost: 100, costMultiplier: 1.15, owned: 0, effect: 2, type: 'clickPower' },
-  { id: 'sean', name: "💜 Sean's Love", description: '+1 auto-clicker', baseCost: 1000, costMultiplier: 1.15, owned: 0, effect: 1, type: 'autoClicker' },
-  { id: 'superClick', name: 'Quarter Zip', description: '+5 click power', baseCost: 5000, costMultiplier: 1.2, owned: 0, effect: 5, type: 'clickPower' },
-  { id: 'megaAuto', name: "💕 Benicio's Love", description: '+5 auto-clickers', baseCost: 10000, costMultiplier: 1.2, owned: 0, effect: 5, type: 'autoClicker' },
+  { id: 'superClick', name: '👕 Quarter Zip', description: '+5 click power', baseCost: 5000, costMultiplier: 1.2, owned: 0, effect: 5, type: 'clickPower' },
   { id: 'hot sauce', name: '🌶️ Hot Sauce', description: '+20 click power', baseCost: 20000, costMultiplier: 1.2, owned: 0, effect: 20, type: 'clickPower' },
-  { id: 'Evil Ben G', name: '😈 Evil Ben G', description: '+10 auto-clickers', baseCost: 100000, costMultiplier: 1.2, owned: 0, effect: 10, type: 'autoClicker' },
   { id: 'discord mod', name: '🎮 Discord Mod', description: '+100 click power', baseCost: 150000, costMultiplier: 1.2, owned: 0, effect: 100, type: 'clickPower' },
   { id: 'macha', name: '🍵 Matcha', description: '+500 click power', baseCost: 1000000, costMultiplier: 1.2, owned: 0, effect: 500, type: 'clickPower' },
-  { id: 'robot', name: '🤖 Robot Helper', description: '+50 auto-clickers', baseCost: 2000000, costMultiplier: 1.25, owned: 0, effect: 50, type: 'autoClicker' },
   { id: 'quantum', name: '⚛️ Quantum Click', description: '+2000 click power', baseCost: 10000000, costMultiplier: 1.3, owned: 0, effect: 2000, type: 'clickPower' },
+  // Auto Clickers
+  { id: 'sean', name: "💜 Sean's Love", description: '+1 auto-clicker', baseCost: 1000, costMultiplier: 1.15, owned: 0, effect: 1, type: 'autoClicker' },
+  { id: 'megaAuto', name: "💕 Benicio's Love", description: '+5 auto-clickers', baseCost: 10000, costMultiplier: 1.2, owned: 0, effect: 5, type: 'autoClicker' },
+  { id: 'Evil Ben G', name: '😈 Evil Ben G', description: '+10 auto-clickers', baseCost: 100000, costMultiplier: 1.2, owned: 0, effect: 10, type: 'autoClicker' },
+  { id: 'robot', name: '🤖 Robot Helper', description: '+50 auto-clickers', baseCost: 2000000, costMultiplier: 1.25, owned: 0, effect: 50, type: 'autoClicker' },
+  { id: 'hivemind', name: '🧠 Hivemind', description: '+200 auto-clickers', baseCost: 50000000, costMultiplier: 1.3, owned: 0, effect: 200, type: 'autoClicker' },
 ];
 
 export const initialSkillTree: SkillNode[] = [
@@ -43,6 +46,16 @@ export const initialTranscendenceTree: TranscendenceNode[] = [
   { id: 'trans7', name: '🌀 Omnipotence', description: '1000x click power. Become one with infinity!', cost: 15, owned: false, effect: 1000, type: 'infinitePower' },
 ];
 
+export const initialEternityTree: EternityNode[] = [
+  { id: 'eter1', name: '🕳️ Void Mastery', description: '1000x ALL production. The void empowers you!', cost: 1, owned: false, effect: 1000, type: 'omnipotent' },
+  { id: 'eter2', name: '⏳ Timeless', description: '10x Transcendence gains. Time flows for you alone!', cost: 2, owned: false, effect: 10, type: 'transcendenceMulti' },
+  { id: 'eter3', name: '🌊 Infinite Automation', description: '10000x auto-clicker power. Armies click for you!', cost: 3, owned: false, effect: 10000, type: 'infiniteAuto' },
+  { id: 'eter4', name: '🔱 Reality Anchor', description: '1T starting clicks after any reset. Begin with power!', cost: 5, owned: false, effect: 1000000000000, type: 'beyondReality' },
+  { id: 'eter5', name: '💠 Dimensional Rift', description: '100000x click power. Each click creates universes!', cost: 8, owned: false, effect: 100000, type: 'omnipotent' },
+  { id: 'eter6', name: '🌟 Eternal Flame', description: '50x Transcendence gains. Burn through realities!', cost: 12, owned: false, effect: 50, type: 'transcendenceMulti' },
+  { id: 'eter7', name: '♾️ True Infinity', description: '1000000x ALL production. You ARE the game!', cost: 25, owned: false, effect: 1000000, type: 'omnipotent' },
+];
+
 export function createInitialAchievements(): Achievement[] {
   return [
     { id: 'first_click', name: 'First Click', description: 'Click for the first time', icon: '👆', unlocked: false, condition: (s: GameState) => s.lifetimeClicks >= 1 },
@@ -61,5 +74,7 @@ export function createInitialAchievements(): Achievement[] {
     { id: 'skill_complete', name: 'Skill Master', description: 'Unlock all prestige skills', icon: '🎓', unlocked: false, condition: (s: GameState) => s.skillTree.every(n => n.owned) },
     { id: 'first_transcendence', name: 'Transcended', description: 'Transcend for the first time', icon: '🌀', unlocked: false, condition: (s: GameState) => s.totalTranscendences >= 1 },
     { id: 'transcendence_master', name: 'Beyond Reality', description: 'Unlock all Transcendence skills', icon: '♾️', unlocked: false, condition: (s: GameState) => s.transcendenceTree.every(n => n.owned) },
+    { id: 'first_eternity', name: 'Eternal', description: 'Reach Eternity for the first time', icon: '🕳️', unlocked: false, condition: (s: GameState) => s.totalEternities >= 1 },
+    { id: 'eternity_master', name: 'True Infinite', description: 'Unlock all Eternity skills', icon: '💠', unlocked: false, condition: (s: GameState) => s.eternityTree.every(n => n.owned) },
   ];
 }

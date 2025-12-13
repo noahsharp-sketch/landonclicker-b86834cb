@@ -15,9 +15,11 @@ export function LandonClicker() {
     buySkillNode,
     buyAscensionNode,
     buyTranscendenceNode,
+    buyEternityNode,
     prestige,
     ascend,
     transcend,
+    enterEternity,
     saveGame,
     resetGame,
     offlineEarnings,
@@ -111,9 +113,11 @@ export function LandonClicker() {
         onPrestige={() => { prestige(); playPrestige(); }}
         onAscend={() => { ascend(); playAscension(); }}
         onTranscend={() => { transcend(); playAscension(); }}
+        onEternity={() => { enterEternity(); playAscension(); }}
         onBuySkillNode={(id) => { buySkillNode(id); playPurchase(); }}
         onBuyAscensionNode={(id) => { buyAscensionNode(id); playPurchase(); }}
         onBuyTranscendenceNode={(id) => { buyTranscendenceNode(id); playPurchase(); }}
+        onBuyEternityNode={(id) => { buyEternityNode(id); playPurchase(); }}
         onSave={saveGame}
         onReset={resetGame}
       />
