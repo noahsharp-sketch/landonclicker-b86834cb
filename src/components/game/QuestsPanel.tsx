@@ -17,7 +17,7 @@ export function QuestsPanel({ gameState, onClaimQuestReward, onClaimChallengeRew
   const { quests, challenges } = gameState.questState;
   const dailyChallenges = challenges.filter(c => c.type === 'daily');
   const weeklyChallenges = challenges.filter(c => c.type === 'weekly');
-  
+
   const availableQuestRewards = quests.filter(q => q.completed && !q.claimed).length;
   const availableChallengeRewards = challenges.filter(c => c.completed && !c.claimed).length;
   const totalRewards = availableQuestRewards + availableChallengeRewards;
@@ -38,6 +38,7 @@ export function QuestsPanel({ gameState, onClaimQuestReward, onClaimChallengeRew
           )}
         </button>
       </DialogTrigger>
+
       <DialogContent className="max-w-lg max-h-[85vh] bg-background border-primary neon-border">
         <DialogHeader>
           <DialogTitle className="text-primary font-retro text-lg flex items-center gap-2">
@@ -110,10 +111,13 @@ export function QuestsPanel({ gameState, onClaimQuestReward, onClaimChallengeRew
 }
 
 function QuestCard({ quest, onClaim }: { quest: Quest; onClaim: () => void }) {
-  const currentStep = quest.steps[quest.currentStep];
-  const progress = quest.completed ? 100 : currentStep 
-    ? Math.min(100, (currentStep.current / currentStep.target) * 100) 
-    : 0;
+  const currentStepIndex = quest.steps.findIndex(s => s.current < s.target);
+  const currentStep = currentStepIndex >= 0 ? quest.steps[currentStepIndex] : quest.steps[0];
+  const progress = quest.completed 
+    ? 100 
+    : currentStep 
+      ? Math.min(100, (currentStep.current / currentStep.target) * 100) 
+      : 0;
 
   return (
     <div className={`p-3 rounded-lg border transition-all ${
@@ -140,17 +144,17 @@ function QuestCard({ quest, onClaim }: { quest: Quest; onClaim: () => void }) {
           <div 
             key={step.id} 
             className={`flex items-center gap-2 text-xs ${
-              idx < quest.currentStep ? 'text-neon-cyan' : 
-              idx === quest.currentStep ? 'text-foreground' : 'text-muted-foreground'
+              idx < currentStepIndex ? 'text-neon-cyan' : 
+              idx === currentStepIndex ? 'text-foreground' : 'text-muted-foreground'
             }`}
           >
-            {idx < quest.currentStep ? (
+            {idx < currentStepIndex ? (
               <Check className="w-3 h-3" />
             ) : (
               <ChevronRight className="w-3 h-3" />
             )}
             <span>{step.description}</span>
-            {idx === quest.currentStep && !quest.completed && (
+            {idx === currentStepIndex && !quest.completed && (
               <span className="ml-auto text-neon-yellow">
                 {formatNumber(step.current)}/{formatNumber(step.target)}
               </span>
