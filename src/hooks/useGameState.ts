@@ -4,10 +4,11 @@ import {
   initialSkillTree,
   initialAscensionTree,
   initialTranscendenceTree,
+  initialEternityTree,
   createInitialAchievements,
 } from '../data/gameData';
 import { createInitialQuestState, generateSpecialEvents } from '../data/questData';
-import type { GameState, QuestState } from '../types/types';
+import type { GameState } from '../types/types';
 
 function mergeArrayById<T extends { id: string }>(saved: T[], fresh: T[]) {
   const map = new Map<string, T>();
@@ -36,13 +37,17 @@ export function useGameState() {
       totalAscensionPoints: 0,
       transcendencePoints: 0,
       totalTranscendencePoints: 0,
+      eternityPoints: 0,
+      totalEternityPoints: 0,
       totalPrestiges: 0,
       totalAscensions: 0,
       totalTranscendences: 0,
+      totalEternities: 0,
       upgrades: initialUpgrades,
       skillTree: initialSkillTree,
       ascensionTree: initialAscensionTree,
       transcendenceTree: initialTranscendenceTree,
+      eternityTree: initialEternityTree,
       achievements: createInitialAchievements(),
       stats: {
         startTime: Date.now(),
@@ -64,9 +69,8 @@ export function useGameState() {
       const parsed = JSON.parse(saved);
       const fresh = getInitialState();
       
-      // Calculate offline earnings
       const lastOnline = parsed.stats?.lastOnlineTime || Date.now();
-      const offlineSeconds = Math.min((Date.now() - lastOnline) / 1000, 86400); // Max 24 hours
+      const offlineSeconds = Math.min((Date.now() - lastOnline) / 1000, 86400);
       const offlineClicks = Math.floor((parsed.cps || 0) * offlineSeconds * 0.5);
       
       if (offlineClicks > 0) {
@@ -83,6 +87,7 @@ export function useGameState() {
         skillTree: mergeArrayById(parsed.skillTree || [], fresh.skillTree),
         ascensionTree: mergeArrayById(parsed.ascensionTree || [], fresh.ascensionTree),
         transcendenceTree: mergeArrayById(parsed.transcendenceTree || [], fresh.transcendenceTree),
+        eternityTree: mergeArrayById(parsed.eternityTree || [], fresh.eternityTree),
         achievements: mergeArrayById(parsed.achievements || [], fresh.achievements),
         questState: {
           ...fresh.questState,
@@ -115,6 +120,10 @@ export function useGameState() {
     state.transcendenceTree.filter(t => t.owned && t.type === 'globalMulti')
       .forEach(t => power *= t.effect);
     
+    // Eternity bonuses
+    state.eternityTree.filter(e => e.owned && e.type === 'omnipotent')
+      .forEach(e => power *= e.effect);
+    
     return power;
   }, []);
 
@@ -141,6 +150,12 @@ export function useGameState() {
     state.transcendenceTree.filter(t => t.owned && t.type === 'globalMulti')
       .forEach(t => cps *= t.effect);
     
+    // Eternity bonuses
+    state.eternityTree.filter(e => e.owned && e.type === 'infiniteAuto')
+      .forEach(e => cps *= e.effect);
+    state.eternityTree.filter(e => e.owned && e.type === 'omnipotent')
+      .forEach(e => cps *= e.effect);
+    
     return cps;
   }, []);
 
@@ -159,7 +174,14 @@ export function useGameState() {
   }, []);
 
   const calculateTranscendenceGain = useCallback((state: GameState) => {
-    return Math.floor(Math.sqrt(state.totalAscensionPoints / 50));
+    let gain = Math.floor(Math.sqrt(state.totalAscensionPoints / 50));
+    state.eternityTree.filter(e => e.owned && e.type === 'transcendenceMulti')
+      .forEach(e => gain *= e.effect);
+    return gain;
+  }, []);
+
+  const calculateEternityGain = useCallback((state: GameState) => {
+    return Math.floor(Math.sqrt(state.totalTranscendencePoints / 25));
   }, []);
 
   const getUpgradeCost = useCallback((upgrade: { baseCost: number; costMultiplier: number; owned: number }) => {
@@ -247,22 +269,44 @@ export function useGameState() {
     });
   }, [calculateClickPower, calculateCPS]);
 
+  const buyEternityNode = useCallback((id: string) => {
+    setGameState(prev => {
+      const node = prev.eternityTree.find(n => n.id === id);
+      if (!node || node.owned || prev.eternityPoints < node.cost) return prev;
+
+      const newEternityTree = prev.eternityTree.map(n => n.id === id ? { ...n, owned: true } : n);
+      const newState = { ...prev, eternityTree: newEternityTree, eternityPoints: prev.eternityPoints - node.cost };
+      return { ...newState, clickPower: calculateClickPower(newState), cps: calculateCPS(newState) };
+    });
+  }, [calculateClickPower, calculateCPS]);
+
+  const getStartingClicks = useCallback((state: GameState) => {
+    let starting = 0;
+    const skillStart = state.skillTree.find(s => s.owned && s.type === 'startingClicks');
+    if (skillStart) starting += skillStart.effect;
+    const megaStart = state.ascensionTree.find(a => a.owned && a.type === 'megaStart');
+    if (megaStart) starting += megaStart.effect;
+    const cosmicStart = state.transcendenceTree.find(t => t.owned && t.type === 'cosmicStart');
+    if (cosmicStart) starting += cosmicStart.effect;
+    const beyondReality = state.eternityTree.find(e => e.owned && e.type === 'beyondReality');
+    if (beyondReality) starting += beyondReality.effect;
+    return starting;
+  }, []);
+
   const prestige = useCallback(() => {
     setGameState(prev => {
       const gain = calculatePrestigeGain(prev);
       if (gain <= 0) return prev;
       
-      const startingClicks = prev.skillTree.find(s => s.owned && s.type === 'startingClicks')?.effect || 0;
-      const megaStart = prev.ascensionTree.find(a => a.owned && a.type === 'megaStart')?.effect || 0;
-      const cosmicStart = prev.transcendenceTree.find(t => t.owned && t.type === 'cosmicStart')?.effect || 0;
+      const startingClicks = getStartingClicks(prev);
       
       return {
         ...getInitialState(),
-        clicks: startingClicks + megaStart + cosmicStart,
-        upgrades: initialUpgrades,
+        clicks: startingClicks,
         skillTree: prev.skillTree,
         ascensionTree: prev.ascensionTree,
         transcendenceTree: prev.transcendenceTree,
+        eternityTree: prev.eternityTree,
         achievements: prev.achievements,
         questState: prev.questState,
         prestigePoints: prev.prestigePoints + gain,
@@ -274,25 +318,27 @@ export function useGameState() {
         transcendencePoints: prev.transcendencePoints,
         totalTranscendencePoints: prev.totalTranscendencePoints,
         totalTranscendences: prev.totalTranscendences,
+        eternityPoints: prev.eternityPoints,
+        totalEternityPoints: prev.totalEternityPoints,
+        totalEternities: prev.totalEternities,
         stats: prev.stats,
       };
     });
-  }, [calculatePrestigeGain]);
+  }, [calculatePrestigeGain, getStartingClicks]);
 
   const ascend = useCallback(() => {
     setGameState(prev => {
       const gain = calculateAscensionGain(prev);
       if (gain <= 0) return prev;
       
-      const cosmicStart = prev.transcendenceTree.find(t => t.owned && t.type === 'cosmicStart')?.effect || 0;
+      const startingClicks = getStartingClicks(prev);
       
       return {
         ...getInitialState(),
-        clicks: cosmicStart,
-        upgrades: initialUpgrades,
-        skillTree: initialSkillTree,
+        clicks: startingClicks,
         ascensionTree: prev.ascensionTree,
         transcendenceTree: prev.transcendenceTree,
+        eternityTree: prev.eternityTree,
         achievements: prev.achievements,
         questState: prev.questState,
         ascensionPoints: prev.ascensionPoints + gain,
@@ -301,28 +347,56 @@ export function useGameState() {
         transcendencePoints: prev.transcendencePoints,
         totalTranscendencePoints: prev.totalTranscendencePoints,
         totalTranscendences: prev.totalTranscendences,
+        eternityPoints: prev.eternityPoints,
+        totalEternityPoints: prev.totalEternityPoints,
+        totalEternities: prev.totalEternities,
         stats: prev.stats,
       };
     });
-  }, [calculateAscensionGain]);
+  }, [calculateAscensionGain, getStartingClicks]);
 
   const transcend = useCallback(() => {
     setGameState(prev => {
       const gain = calculateTranscendenceGain(prev);
       if (gain <= 0) return prev;
       
+      const startingClicks = getStartingClicks(prev);
+      
       return {
         ...getInitialState(),
+        clicks: startingClicks,
         transcendenceTree: prev.transcendenceTree,
+        eternityTree: prev.eternityTree,
         achievements: prev.achievements,
         questState: prev.questState,
         transcendencePoints: prev.transcendencePoints + gain,
         totalTranscendencePoints: prev.totalTranscendencePoints + gain,
         totalTranscendences: prev.totalTranscendences + 1,
+        eternityPoints: prev.eternityPoints,
+        totalEternityPoints: prev.totalEternityPoints,
+        totalEternities: prev.totalEternities,
         stats: prev.stats,
       };
     });
-  }, [calculateTranscendenceGain]);
+  }, [calculateTranscendenceGain, getStartingClicks]);
+
+  const enterEternity = useCallback(() => {
+    setGameState(prev => {
+      const gain = calculateEternityGain(prev);
+      if (gain <= 0) return prev;
+      
+      return {
+        ...getInitialState(),
+        eternityTree: prev.eternityTree,
+        achievements: prev.achievements,
+        questState: prev.questState,
+        eternityPoints: prev.eternityPoints + gain,
+        totalEternityPoints: prev.totalEternityPoints + gain,
+        totalEternities: prev.totalEternities + 1,
+        stats: prev.stats,
+      };
+    });
+  }, [calculateEternityGain]);
 
   const claimQuestReward = useCallback((questId: string) => {
     setGameState(prev => {
@@ -478,15 +552,18 @@ export function useGameState() {
     buySkillNode,
     buyAscensionNode,
     buyTranscendenceNode,
+    buyEternityNode,
     prestige,
     ascend,
     transcend,
+    enterEternity,
     resetGame,
     saveGame,
     getUpgradeCost,
     calculatePrestigeGain,
     calculateAscensionGain,
     calculateTranscendenceGain,
+    calculateEternityGain,
     offlineEarnings,
     claimQuestReward,
     claimChallengeReward,

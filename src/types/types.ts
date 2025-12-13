@@ -39,6 +39,16 @@ export interface TranscendenceNode {
   type: 'globalMulti' | 'ascensionMulti' | 'infinitePower' | 'cosmicStart' | 'eternityBoost';
 }
 
+export interface EternityNode {
+  id: string;
+  name: string;
+  description: string;
+  cost: number;
+  owned: boolean;
+  effect: number;
+  type: 'omnipotent' | 'transcendenceMulti' | 'infiniteAuto' | 'beyondReality' | 'timeless';
+}
+
 export interface Achievement {
   id: string;
   name: string;
@@ -166,13 +176,17 @@ export interface GameState {
   totalAscensionPoints: number;
   transcendencePoints: number;
   totalTranscendencePoints: number;
+  eternityPoints: number;
+  totalEternityPoints: number;
   totalPrestiges: number;
   totalAscensions: number;
   totalTranscendences: number;
+  totalEternities: number;
   upgrades: Upgrade[];
   skillTree: SkillNode[];
   ascensionTree: AscensionNode[];
   transcendenceTree: TranscendenceNode[];
+  eternityTree: EternityNode[];
   achievements: Achievement[];
   stats: GameStats;
   questState: QuestState;
