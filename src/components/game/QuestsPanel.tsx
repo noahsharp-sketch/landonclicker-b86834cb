@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Target, Check, Gift, ChevronRight } from 'lucide-react';
@@ -13,8 +13,14 @@ interface QuestsPanelProps {
 
 export function QuestsPanel({ gameState, onClaimQuestReward, onClaimChallengeReward }: QuestsPanelProps) {
   const [activeTab, setActiveTab] = useState<'quests' | 'daily' | 'weekly'>('quests');
-  
-  const { quests, challenges } = gameState.questState;
+  const [questState, setQuestState] = useState(gameState.questState);
+
+  // Live update questState when gameState.questState changes
+  useEffect(() => {
+    setQuestState(gameState.questState);
+  }, [gameState.questState]);
+
+  const { quests, challenges } = questState;
   const dailyChallenges = challenges.filter(c => c.type === 'daily');
   const weeklyChallenges = challenges.filter(c => c.type === 'weekly');
 
@@ -25,7 +31,7 @@ export function QuestsPanel({ gameState, onClaimQuestReward, onClaimChallengeRew
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <button 
+        <button
           className="relative flex items-center gap-1 px-2 py-1 rounded bg-card border border-neon-cyan/50 hover:border-neon-cyan text-neon-cyan text-[10px] md:text-xs transition-all hover:scale-105"
           title="Quests & Challenges"
         >
@@ -38,7 +44,6 @@ export function QuestsPanel({ gameState, onClaimQuestReward, onClaimChallengeRew
           )}
         </button>
       </DialogTrigger>
-
       <DialogContent className="max-w-lg max-h-[85vh] bg-background border-primary neon-border">
         <DialogHeader>
           <DialogTitle className="text-primary font-retro text-lg flex items-center gap-2">
@@ -70,10 +75,10 @@ export function QuestsPanel({ gameState, onClaimQuestReward, onClaimChallengeRew
           {activeTab === 'quests' && (
             <div className="space-y-3">
               {quests.map(quest => (
-                <QuestCard 
-                  key={quest.id} 
-                  quest={quest} 
-                  onClaim={() => onClaimQuestReward(quest.id)} 
+                <QuestCard
+                  key={quest.id}
+                  quest={quest}
+                  onClaim={() => onClaimQuestReward(quest.id)}
                 />
               ))}
             </div>
@@ -83,10 +88,10 @@ export function QuestsPanel({ gameState, onClaimQuestReward, onClaimChallengeRew
             <div className="space-y-3">
               <TimeRemaining expiresAt={dailyChallenges[0]?.expiresAt} label="Daily reset in" />
               {dailyChallenges.map(challenge => (
-                <ChallengeCard 
-                  key={challenge.id} 
-                  challenge={challenge} 
-                  onClaim={() => onClaimChallengeReward(challenge.id)} 
+                <ChallengeCard
+                  key={challenge.id}
+                  challenge={challenge}
+                  onClaim={() => onClaimChallengeReward(challenge.id)}
                 />
               ))}
             </div>
@@ -96,10 +101,10 @@ export function QuestsPanel({ gameState, onClaimQuestReward, onClaimChallengeRew
             <div className="space-y-3">
               <TimeRemaining expiresAt={weeklyChallenges[0]?.expiresAt} label="Weekly reset in" />
               {weeklyChallenges.map(challenge => (
-                <ChallengeCard 
-                  key={challenge.id} 
-                  challenge={challenge} 
-                  onClaim={() => onClaimChallengeReward(challenge.id)} 
+                <ChallengeCard
+                  key={challenge.id}
+                  challenge={challenge}
+                  onClaim={() => onClaimChallengeReward(challenge.id)}
                 />
               ))}
             </div>
@@ -111,22 +116,23 @@ export function QuestsPanel({ gameState, onClaimQuestReward, onClaimChallengeRew
 }
 
 function QuestCard({ quest, onClaim }: { quest: Quest; onClaim: () => void }) {
-  const currentStepIndex = quest.steps.findIndex(s => s.current < s.target);
-  const currentStep = currentStepIndex >= 0 ? quest.steps[currentStepIndex] : quest.steps[0];
-  const progress = quest.completed 
-    ? 100 
-    : currentStep 
-      ? Math.min(100, (currentStep.current / currentStep.target) * 100) 
-      : 0;
+  const currentStep = quest.steps[quest.currentStep];
+  const progress = quest.completed
+    ? 100
+    : currentStep
+    ? Math.min(100, (currentStep.current / currentStep.target) * 100)
+    : 0;
 
   return (
-    <div className={`p-3 rounded-lg border transition-all ${
-      quest.claimed 
-        ? 'bg-muted/30 border-muted opacity-60' 
-        : quest.completed 
-          ? 'bg-neon-cyan/10 border-neon-cyan animate-pulse' 
+    <div
+      className={`p-3 rounded-lg border transition-all ${
+        quest.claimed
+          ? 'bg-muted/30 border-muted opacity-60'
+          : quest.completed
+          ? 'bg-neon-cyan/10 border-neon-cyan animate-pulse'
           : 'bg-card border-border'
-    }`}>
+      }`}
+    >
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-2">
           <span className="text-xl">{quest.icon}</span>
@@ -141,20 +147,23 @@ function QuestCard({ quest, onClaim }: { quest: Quest; onClaim: () => void }) {
       {/* Steps */}
       <div className="space-y-1 mb-2">
         {quest.steps.map((step, idx) => (
-          <div 
-            key={step.id} 
+          <div
+            key={step.id}
             className={`flex items-center gap-2 text-xs ${
-              idx < currentStepIndex ? 'text-neon-cyan' : 
-              idx === currentStepIndex ? 'text-foreground' : 'text-muted-foreground'
+              idx < quest.currentStep
+                ? 'text-neon-cyan'
+                : idx === quest.currentStep
+                ? 'text-foreground'
+                : 'text-muted-foreground'
             }`}
           >
-            {idx < currentStepIndex ? (
+            {idx < quest.currentStep ? (
               <Check className="w-3 h-3" />
             ) : (
               <ChevronRight className="w-3 h-3" />
             )}
             <span>{step.description}</span>
-            {idx === currentStepIndex && !quest.completed && (
+            {idx === quest.currentStep && !quest.completed && (
               <span className="ml-auto text-neon-yellow">
                 {formatNumber(step.current)}/{formatNumber(step.target)}
               </span>
@@ -166,7 +175,7 @@ function QuestCard({ quest, onClaim }: { quest: Quest; onClaim: () => void }) {
       {/* Progress Bar */}
       {!quest.claimed && (
         <div className="w-full h-2 bg-muted rounded-full overflow-hidden mb-2">
-          <div 
+          <div
             className="h-full bg-neon-cyan transition-all duration-300"
             style={{ width: `${progress}%` }}
           />
@@ -182,7 +191,7 @@ function QuestCard({ quest, onClaim }: { quest: Quest; onClaim: () => void }) {
           {quest.rewards.prestigePoints && <span className="text-neon-yellow">+{quest.rewards.prestigePoints} PP</span>}
           {quest.rewards.ascensionPoints && <span className="text-neon-purple">+{quest.rewards.ascensionPoints} AP</span>}
         </div>
-        
+
         {quest.completed && !quest.claimed && (
           <button
             onClick={onClaim}
@@ -200,13 +209,15 @@ function ChallengeCard({ challenge, onClaim }: { challenge: Challenge; onClaim: 
   const progress = Math.min(100, (challenge.current / challenge.target) * 100);
 
   return (
-    <div className={`p-3 rounded-lg border transition-all ${
-      challenge.claimed 
-        ? 'bg-muted/30 border-muted opacity-60' 
-        : challenge.completed 
-          ? 'bg-neon-yellow/10 border-neon-yellow animate-pulse' 
+    <div
+      className={`p-3 rounded-lg border transition-all ${
+        challenge.claimed
+          ? 'bg-muted/30 border-muted opacity-60'
+          : challenge.completed
+          ? 'bg-neon-yellow/10 border-neon-yellow animate-pulse'
           : 'bg-card border-border'
-    }`}>
+      }`}
+    >
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-2">
           <span className="text-xl">{challenge.icon}</span>
@@ -226,7 +237,7 @@ function ChallengeCard({ challenge, onClaim }: { challenge: Challenge; onClaim: 
             <span className="text-neon-yellow">{formatNumber(challenge.current)}/{formatNumber(challenge.target)}</span>
           </div>
           <div className="w-full h-2 bg-muted rounded-full overflow-hidden mb-2">
-            <div 
+            <div
               className="h-full bg-neon-yellow transition-all duration-300"
               style={{ width: `${progress}%` }}
             />
@@ -241,7 +252,7 @@ function ChallengeCard({ challenge, onClaim }: { challenge: Challenge; onClaim: 
           {challenge.rewards.clicks && <span className="text-foreground">{formatNumber(challenge.rewards.clicks)} clicks</span>}
           {challenge.rewards.prestigePoints && <span className="text-neon-yellow">+{challenge.rewards.prestigePoints} PP</span>}
         </div>
-        
+
         {challenge.completed && !challenge.claimed && (
           <button
             onClick={onClaim}
@@ -256,10 +267,17 @@ function ChallengeCard({ challenge, onClaim }: { challenge: Challenge; onClaim: 
 }
 
 function TimeRemaining({ expiresAt, label }: { expiresAt: number; label: string }) {
-  const now = Date.now();
-  const remaining = Math.max(0, expiresAt - now);
-  const hours = Math.floor(remaining / (1000 * 60 * 60));
-  const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+  const [timeLeft, setTimeLeft] = useState(expiresAt - Date.now());
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTimeLeft(Math.max(0, expiresAt - Date.now()));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [expiresAt]);
+
+  const hours = Math.floor(timeLeft / (1000 * 60 * 60));
+  const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
 
   return (
     <div className="text-center text-xs text-muted-foreground mb-2">
