@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   initialUpgrades,
   initialSkillTree,
@@ -7,407 +7,465 @@ import {
   initialEternityTree,
   createInitialAchievements,
 } from '../data/gameData';
-import { createInitialQuestState, generateSpecialEvents } from '../data/questData';
-import type { GameState } from '../types/types';
+import { createInitialQuestState, createDailyChallenges, createWeeklyChallenges } from '../data/questData';
+import { calculateClickPower, calculateCPS, calculatePrestigeGain, calculateAscensionGain, calculateTranscendenceGain, calculateEternityGain } from '../utils/calculations';
+import { buyUpgrade as buyUpgradeAction } from '../utils/actions';
+import { GameState, LeaderboardEntry } from '../types/types';
 
+const STORAGE_KEY = 'landon-clicker-save';
+
+/* ---------------- Merge Helpers ---------------- */
 function mergeArrayById<T extends { id: string }>(saved: T[], fresh: T[]) {
   const map = new Map<string, T>();
-  saved.forEach(item => map.set(item.id, item));
-  fresh.forEach(item => {
-    if (!map.has(item.id)) map.set(item.id, item);
+  saved.forEach(i => map.set(i.id, i));
+  fresh.forEach(i => {
+    if (!map.has(i.id)) map.set(i.id, i);
   });
   return Array.from(map.values());
 }
 
-const STORAGE_KEY = 'landon-clicker-save';
+function mergeAchievements(saved: any[], fresh: ReturnType<typeof createInitialAchievements>) {
+  return fresh.map(freshAch => {
+    const savedAch = saved.find(s => s.id === freshAch.id);
+    return savedAch ? { ...freshAch, unlocked: savedAch.unlocked } : freshAch;
+  });
+}
 
+/* ---------------- Hook ---------------- */
 export function useGameState() {
   const lastTickRef = useRef(Date.now());
-  const tickCounterRef = useRef(0);
-  const [offlineEarnings, setOfflineEarnings] = useState<number | null>(null);
 
-  function getInitialState(): GameState {
-    return {
-      clicks: 0,
-      lifetimeClicks: 0,
-      clickPower: 1,
-      cps: 0,
-      prestigePoints: 0,
-      totalPrestigePoints: 0,
-      ascensionPoints: 0,
-      totalAscensionPoints: 0,
-      transcendencePoints: 0,
-      totalTranscendencePoints: 0,
-      eternityPoints: 0,
-      totalEternityPoints: 0,
-      totalPrestiges: 0,
-      totalAscensions: 0,
-      totalTranscendences: 0,
-      totalEternities: 0,
-      upgrades: initialUpgrades,
-      skillTree: initialSkillTree,
-      ascensionTree: initialAscensionTree,
-      transcendenceTree: initialTranscendenceTree,
-      eternityTree: initialEternityTree,
-      achievements: createInitialAchievements(),
-      stats: {
-        startTime: Date.now(),
-        totalPlaytime: 0,
-        bestCPS: 0,
-        totalClicks: 0,
-        cpsHistory: [],
-        clicksHistory: [],
-        lastOnlineTime: Date.now(),
-      },
-      questState: createInitialQuestState(),
-    };
-  }
+  const getInitialState = (): GameState => ({
+    clicks: 0,
+    lifetimeClicks: 0,
+    clickPower: 1,
+    cps: 0,
+    prestigePoints: 0,
+    totalPrestigePoints: 0,
+    ascensionPoints: 0,
+    totalAscensionPoints: 0,
+    transcendencePoints: 0,
+    totalTranscendencePoints: 0,
+    eternityPoints: 0,
+    totalEternityPoints: 0,
+    totalPrestiges: 0,
+    totalAscensions: 0,
+    totalTranscendences: 0,
+    totalEternities: 0,
+    upgrades: initialUpgrades,
+    skillTree: initialSkillTree,
+    ascensionTree: initialAscensionTree,
+    transcendenceTree: initialTranscendenceTree,
+    eternityTree: initialEternityTree,
+    achievements: createInitialAchievements(),
+    stats: {
+      startTime: Date.now(),
+      totalPlaytime: 0,
+      bestCPS: 0,
+      totalClicks: 0,
+      cpsHistory: [],
+      clicksHistory: [],
+      lastOnlineTime: Date.now(),
+    },
+    questState: createInitialQuestState(),
+  });
 
+  /* ---------------- Update Quest Progress ---------------- */
+  const updateQuestProgress = useCallback((state: GameState, type: string, amount: number) => {
+    const totalUpgrades = state.upgrades.reduce((sum, u) => sum + u.owned, 0);
+
+    const newQuests = state.questState.quests.map(quest => {
+      if (quest.completed) return quest;
+
+      const updatedSteps = quest.steps.map((step, idx) => {
+        if (step.type === type || (step.type === 'upgrades' && type === 'upgrades')) {
+          const newCurrent = step.current + amount;
+          return { ...step, current: newCurrent };
+        }
+        return step;
+      });
+
+      let currentStep = quest.currentStep;
+      while (currentStep < updatedSteps.length && updatedSteps[currentStep].current >= updatedSteps[currentStep].target) {
+        currentStep++;
+      }
+      const completed = currentStep >= updatedSteps.length;
+
+      return { ...quest, steps: updatedSteps, currentStep, completed };
+    });
+
+    const newChallenges = state.questState.challenges.map(challenge => {
+      if (challenge.completed || challenge.claimed) return challenge;
+
+      let current = 0;
+      switch (challenge.conditionType) {
+        case 'clicks': current = state.clicks; break;
+        case 'lifetimeClicks': current = state.lifetimeClicks; break;
+        case 'cps': current = state.cps; break;
+        case 'upgrades': current = totalUpgrades; break;
+        case 'prestiges': current = state.totalPrestiges; break;
+      }
+
+      const completed = current >= challenge.target;
+      return { ...challenge, current, completed };
+    });
+
+    return { ...state, questState: { ...state.questState, quests: newQuests, challenges: newChallenges } };
+  }, []);
+
+  /* ---------------- Load Game State ---------------- */
   const [gameState, setGameState] = useState<GameState>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (!saved) return getInitialState();
+
     try {
       const parsed = JSON.parse(saved);
       const fresh = getInitialState();
-
-      const lastOnline = parsed.stats?.lastOnlineTime || Date.now();
-      const offlineSeconds = Math.min((Date.now() - lastOnline) / 1000, 86400);
-      const offlineClicks = Math.floor((parsed.cps || 0) * offlineSeconds * 0.5);
-
-      if (offlineClicks > 0) {
-        setOfflineEarnings(offlineClicks);
-        setTimeout(() => setOfflineEarnings(null), 5000);
-      }
-
-      return {
+      let loadedState: GameState = {
         ...fresh,
         ...parsed,
-        clicks: (parsed.clicks || 0) + offlineClicks,
-        lifetimeClicks: (parsed.lifetimeClicks || 0) + offlineClicks,
         upgrades: mergeArrayById(parsed.upgrades || [], fresh.upgrades),
         skillTree: mergeArrayById(parsed.skillTree || [], fresh.skillTree),
         ascensionTree: mergeArrayById(parsed.ascensionTree || [], fresh.ascensionTree),
         transcendenceTree: mergeArrayById(parsed.transcendenceTree || [], fresh.transcendenceTree),
         eternityTree: mergeArrayById(parsed.eternityTree || [], fresh.eternityTree),
-        achievements: mergeArrayById(parsed.achievements || [], fresh.achievements),
+        achievements: mergeAchievements(parsed.achievements || [], fresh.achievements),
         questState: {
           ...fresh.questState,
           ...parsed.questState,
-          events: generateSpecialEvents(),
+          quests: mergeArrayById(parsed.questState?.quests || [], fresh.questState.quests),
+          challenges: parsed.questState?.challenges || fresh.questState.challenges,
+          leaderboard: parsed.questState?.leaderboard || [],
         },
-        stats: {
-          ...fresh.stats,
-          ...parsed.stats,
-          lastOnlineTime: Date.now(),
-        },
+        stats: { ...fresh.stats, ...parsed.stats },
       };
+
+      // Offline progress
+      const now = Date.now();
+      const offlineSeconds = Math.min((now - loadedState.stats.lastOnlineTime) / 1000, 86400);
+      if (offlineSeconds > 10 && loadedState.cps > 0) {
+        const offlineGain = loadedState.cps * offlineSeconds * 0.5;
+        loadedState.clicks += offlineGain;
+        loadedState.lifetimeClicks += offlineGain;
+      }
+
+      return loadedState;
     } catch {
       return getInitialState();
     }
   });
 
-  // -----------------------------
-  // Calculations
-  // -----------------------------
-  const calculateClickPower = useCallback((state: GameState) => {
-    let power = 1;
-    state.upgrades.filter(u => u.type === 'clickPower')
-      .forEach(u => power += u.effect * u.owned);
-    state.skillTree.filter(s => s.owned && s.type === 'clickMulti')
-      .forEach(s => power *= s.effect);
-    state.transcendenceTree.filter(t => t.owned && ['infinitePower','globalMulti'].includes(t.type))
-      .forEach(t => power *= t.effect);
-    state.eternityTree.filter(e => e.owned && ['omnipotent'].includes(e.type))
-      .forEach(e => power *= e.effect);
-    return power;
-  }, []);
+  const [offlineEarnings, setOfflineEarnings] = useState<number | null>(null);
 
-  const calculateCPS = useCallback((state: GameState) => {
-    let cps = 0;
-    state.upgrades.filter(u => u.type === 'autoClicker')
-      .forEach(u => cps += u.effect * u.owned * state.clickPower);
-    state.skillTree.filter(s => s.owned && ['cpsBoost','cpsMulti'].includes(s.type))
-      .forEach(s => cps *= s.effect);
-    state.ascensionTree.filter(a => a.owned && ['allMulti','ultimateCPS'].includes(a.type))
-      .forEach(a => cps *= a.effect);
-    state.transcendenceTree.filter(t => t.owned && ['eternityBoost','globalMulti'].includes(t.type))
-      .forEach(t => cps *= t.effect);
-    state.eternityTree.filter(e => e.owned && ['infiniteAuto','omnipotent'].includes(e.type))
-      .forEach(e => cps *= e.effect);
-    return cps;
-  }, []);
-
-  const calculatePrestigeGain = useCallback((state: GameState) => {
-    let gain = Math.floor(state.lifetimeClicks / 10_000_000);
-    state.ascensionTree.filter(a => a.owned && a.type === 'prestigeMulti')
-      .forEach(a => gain *= a.effect);
-    return gain;
-  }, []);
-
-  const calculateAscensionGain = useCallback((state: GameState) => {
-    let gain = Math.floor(Math.sqrt(state.totalPrestigePoints / 500));
-    state.transcendenceTree.filter(t => t.owned && t.type === 'ascensionMulti')
-      .forEach(t => gain *= t.effect);
-    return gain;
-  }, []);
-
-  const calculateTranscendenceGain = useCallback((state: GameState) => {
-    let gain = Math.floor(Math.sqrt(state.totalAscensionPoints / 250));
-    state.eternityTree.filter(e => e.owned && e.type === 'transcendenceMulti')
-      .forEach(e => gain *= e.effect);
-    return gain;
-  }, []);
-
-  const calculateEternityGain = useCallback((state: GameState) => {
-    return Math.floor(Math.sqrt(state.totalTranscendencePoints / 100));
-  }, []);
-
-  const getUpgradeCost = useCallback((upgrade: { baseCost: number; costMultiplier: number; owned: number }) => {
-    return Math.floor(upgrade.baseCost * Math.pow(upgrade.costMultiplier, upgrade.owned));
-  }, []);
-
-  // -----------------------------
-  // Quest Tracking Fix
-  // -----------------------------
-  const updateQuestProgress = useCallback((state: GameState, type: string, amount: number) => {
-    const newQuests = state.questState.quests.map(quest => {
-      if (quest.completed) return quest;
-      const newSteps = quest.steps.map(step => ({
-        ...step,
-        current: step.type === type ? step.current + amount : step.current
-      }));
-      const completed = newSteps.every(s => s.current >= s.target);
-      const currentStep = newSteps.findIndex(s => s.current < s.target);
-      return { ...quest, steps: newSteps, completed, currentStep: currentStep === -1 ? newSteps.length - 1 : currentStep };
-    });
-    const newChallenges = state.questState.challenges.map(c => {
-      const current = (() => {
-        switch(c.conditionType || c.type){
-          case 'clicks': return state.clicks;
-          case 'lifetimeClicks': return state.lifetimeClicks;
-          case 'cps': return state.cps;
-          case 'upgrades': return state.upgrades.reduce((sum, u) => sum + u.owned, 0);
-          case 'prestiges': return state.totalPrestiges;
-          case 'ascensions': return state.totalAscensions;
-          case 'transcendences': return state.totalTranscendences;
-          case 'eternities': return state.totalEternities;
-          default: return 0;
-        }
-      })();
-      return {...c, current, completed: current >= c.target};
-    });
-    return { ...state, questState: { ...state.questState, quests: newQuests, challenges: newChallenges } };
-  }, []);
-
-  const updateEventProgress = useCallback((state: GameState, eventId: string) => {
-    const event = state.questState.events.find(e => e.id === eventId);
-    if (!event || !event.completed) return state;
-    return updateQuestProgress(state, 'specialEvent', 1);
-  }, [updateQuestProgress]);
-
-  // -----------------------------
-  // Actions
-  // -----------------------------
+  /* ---------------- Core Actions ---------------- */
   const handleClick = useCallback(() => {
     setGameState(prev => {
-      let newState = {...prev, clicks: prev.clicks + prev.clickPower, lifetimeClicks: prev.lifetimeClicks + prev.clickPower};
-      return updateQuestProgress(newState, 'clicks', newState.clickPower);
+      let newState = {
+        ...prev,
+        clicks: prev.clicks + prev.clickPower,
+        lifetimeClicks: prev.lifetimeClicks + prev.clickPower,
+        stats: { ...prev.stats, totalClicks: prev.stats.totalClicks + 1 },
+      };
+      newState = updateQuestProgress(newState, 'clicks', newState.clickPower);
+      return newState;
     });
   }, [updateQuestProgress]);
 
   const buyUpgrade = useCallback((id: string) => {
     setGameState(prev => {
-      const upgrade = prev.upgrades.find(u => u.id === id);
-      if (!upgrade) return prev;
-      const cost = Math.floor(upgrade.baseCost * Math.pow(upgrade.costMultiplier, upgrade.owned));
-      if (prev.clicks < cost) return prev;
-      let newState = {...prev, upgrades: prev.upgrades.map(u => u.id === id ? {...u, owned: u.owned + 1} : u), clicks: prev.clicks - cost};
-      newState = {...newState, clickPower: calculateClickPower(newState), cps: calculateCPS(newState)};
-      if(upgrade.type==='autoClicker') newState = updateQuestProgress(newState, 'autoClicker', 1);
+      let newState = buyUpgradeAction(prev, id);
+      newState = updateQuestProgress(newState, 'upgrades', 1);
       return newState;
     });
-  }, [calculateClickPower, calculateCPS, updateQuestProgress]);
+  }, [updateQuestProgress]);
 
   const buyUpgradeBulk = useCallback((id: string, amount: number | "MAX") => {
     setGameState(prev => {
       const upgrade = prev.upgrades.find(u => u.id === id);
-      if(!upgrade) return prev;
+      if (!upgrade) return prev;
+
       let clicks = prev.clicks;
       let owned = upgrade.owned;
       let toBuy = amount === "MAX" ? Infinity : amount;
       let bought = 0;
 
-      while(bought < toBuy){
+      while (bought < toBuy) {
         const nextCost = Math.floor(upgrade.baseCost * Math.pow(upgrade.costMultiplier, owned));
-        if(clicks < nextCost) break;
+        if (clicks < nextCost) break;
         clicks -= nextCost;
         owned++;
         bought++;
       }
 
-      if(bought===0) return prev;
+      if (bought === 0) return prev;
 
-      let newState = {...prev, upgrades: prev.upgrades.map(u => u.id===id ? {...u, owned} : u), clicks};
-      newState = {...newState, clickPower: calculateClickPower(newState), cps: calculateCPS(newState)};
-      if(upgrade.type==='autoClicker') newState = updateQuestProgress(newState,'autoClicker',bought);
+      let newState: GameState = {
+        ...prev,
+        upgrades: prev.upgrades.map(u => u.id === id ? { ...u, owned } : u),
+        clicks,
+      };
+      newState.clickPower = calculateClickPower(newState);
+      newState.cps = calculateCPS(newState);
+      newState = updateQuestProgress(newState, 'upgrades', bought);
       return newState;
     });
-  }, [calculateClickPower, calculateCPS, updateQuestProgress]);
+  }, [updateQuestProgress]);
 
-  // -----------------------------
-  // Prestige / Ascend / Transcend / Eternity
-  // -----------------------------
-  const getStartingClicks = useCallback((state: GameState) => {
-    let starting = 0;
-    state.skillTree.filter(s=>s.owned && s.type==='startingClicks').forEach(s=>starting+=s.effect);
-    state.ascensionTree.filter(a=>a.owned && a.type==='megaStart').forEach(a=>starting+=a.effect);
-    state.transcendenceTree.filter(t=>t.owned && t.type==='cosmicStart').forEach(t=>starting+=t.effect);
-    state.eternityTree.filter(e=>e.owned && e.type==='beyondReality').forEach(e=>starting+=e.effect);
-    return starting;
-  }, []);
+  const buySkillNode = useCallback((id: string) => {
+    setGameState(prev => {
+      const node = prev.skillTree.find(n => n.id === id);
+      if (!node || node.owned || prev.prestigePoints < node.cost) return prev;
+
+      const newSkillTree = prev.skillTree.map(n => n.id === id ? { ...n, owned: true } : n);
+      let newState: GameState = { ...prev, skillTree: newSkillTree, prestigePoints: prev.prestigePoints - node.cost };
+      newState.clickPower = calculateClickPower(newState);
+      newState.cps = calculateCPS(newState);
+      return updateQuestProgress(newState, 'skillNode', 1);
+    });
+  }, [updateQuestProgress]);
+
+  const buyAscensionNode = useCallback((id: string) => {
+    setGameState(prev => {
+      const node = prev.ascensionTree.find(n => n.id === id);
+      if (!node || node.owned || prev.ascensionPoints < node.cost) return prev;
+
+      const newAscTree = prev.ascensionTree.map(n => n.id === id ? { ...n, owned: true } : n);
+      let newState: GameState = { ...prev, ascensionTree: newAscTree, ascensionPoints: prev.ascensionPoints - node.cost };
+      newState.clickPower = calculateClickPower(newState);
+      newState.cps = calculateCPS(newState);
+      return updateQuestProgress(newState, 'ascensionNode', 1);
+    });
+  }, [updateQuestProgress]);
+
+  const buyTranscendenceNode = useCallback((id: string) => {
+    setGameState(prev => {
+      const node = prev.transcendenceTree.find(n => n.id === id);
+      if (!node || node.owned || prev.transcendencePoints < node.cost) return prev;
+
+      const newTree = prev.transcendenceTree.map(n => n.id === id ? { ...n, owned: true } : n);
+      let newState: GameState = { ...prev, transcendenceTree: newTree, transcendencePoints: prev.transcendencePoints - node.cost };
+      newState.clickPower = calculateClickPower(newState);
+      newState.cps = calculateCPS(newState);
+      return updateQuestProgress(newState, 'transcendenceNode', 1);
+    });
+  }, [updateQuestProgress]);
+
+  const buyEternityNode = useCallback((id: string) => {
+    setGameState(prev => {
+      const node = prev.eternityTree.find(n => n.id === id);
+      if (!node || node.owned || prev.eternityPoints < node.cost) return prev;
+
+      const newTree = prev.eternityTree.map(n => n.id === id ? { ...n, owned: true } : n);
+      let newState: GameState = { ...prev, eternityTree: newTree, eternityPoints: prev.eternityPoints - node.cost };
+      newState.clickPower = calculateClickPower(newState);
+      newState.cps = calculateCPS(newState);
+      return updateQuestProgress(newState, 'eternityNode', 1);
+    });
+  }, [updateQuestProgress]);
 
   const prestige = useCallback(() => {
     setGameState(prev => {
       const gain = calculatePrestigeGain(prev);
-      if(gain<=0) return prev;
-      let newState = {...getInitialState(), clicks:getStartingClicks(prev), skillTree: prev.skillTree, ascensionTree: prev.ascensionTree, transcendenceTree: prev.transcendenceTree, eternityTree: prev.eternityTree, achievements: prev.achievements, questState: prev.questState, prestigePoints: prev.prestigePoints+gain, totalPrestigePoints: prev.totalPrestigePoints+gain, totalPrestiges: prev.totalPrestiges+1, ascensionPoints: prev.ascensionPoints, totalAscensionPoints: prev.totalAscensionPoints, totalAscensions: prev.totalAscensions, transcendencePoints: prev.transcendencePoints, totalTranscendencePoints: prev.totalTranscendencePoints, totalTranscendences: prev.totalTranscendences, eternityPoints: prev.eternityPoints, totalEternityPoints: prev.totalEternityPoints, totalEternities: prev.totalEternities, stats: prev.stats};
-      return updateQuestProgress(newState,'prestige',gain);
+      if (gain <= 0) return prev;
+
+      const newState: GameState = {
+        ...getInitialState(),
+        clicks: 0,
+        prestigePoints: prev.prestigePoints + gain,
+        totalPrestigePoints: prev.totalPrestigePoints + gain,
+        totalPrestiges: prev.totalPrestiges + 1,
+        skillTree: prev.skillTree,
+        ascensionTree: prev.ascensionTree,
+        transcendenceTree: prev.transcendenceTree,
+        eternityTree: prev.eternityTree,
+        achievements: prev.achievements,
+        questState: prev.questState,
+      };
+
+      newState.clickPower = calculateClickPower(newState);
+      newState.cps = calculateCPS(newState);
+      return updateQuestProgress(newState, 'prestiges', gain);
     });
-  }, [calculatePrestigeGain,getStartingClicks,updateQuestProgress]);
+  }, [updateQuestProgress]);
 
   const ascend = useCallback(() => {
     setGameState(prev => {
       const gain = calculateAscensionGain(prev);
-      if(gain<=0) return prev;
-      let newState = {...getInitialState(), clicks:getStartingClicks(prev), ascensionTree: prev.ascensionTree, transcendenceTree: prev.transcendenceTree, eternityTree: prev.eternityTree, achievements: prev.achievements, questState: prev.questState, ascensionPoints: prev.ascensionPoints+gain, totalAscensionPoints: prev.totalAscensionPoints+gain, totalAscensions: prev.totalAscensions+1, transcendencePoints: prev.transcendencePoints, totalTranscendencePoints: prev.totalTranscendencePoints, totalTranscendences: prev.totalTranscendences, eternityPoints: prev.eternityPoints, totalEternityPoints: prev.totalEternityPoints, totalEternities: prev.totalEternities, stats: prev.stats};
-      return updateQuestProgress(newState,'ascension',gain);
+      if (gain <= 0) return prev;
+
+      const newState: GameState = {
+        ...getInitialState(),
+        ascensionPoints: prev.ascensionPoints + gain,
+        totalAscensionPoints: prev.totalAscensionPoints + gain,
+        totalAscensions: prev.totalAscensions + 1,
+        skillTree: prev.skillTree,
+        ascensionTree: prev.ascensionTree,
+        transcendenceTree: prev.transcendenceTree,
+        eternityTree: prev.eternityTree,
+        achievements: prev.achievements,
+        questState: prev.questState,
+      };
+
+      newState.clickPower = calculateClickPower(newState);
+      newState.cps = calculateCPS(newState);
+      return updateQuestProgress(newState, 'ascensions', gain);
     });
-  }, [calculateAscensionGain,getStartingClicks,updateQuestProgress]);
+  }, [updateQuestProgress]);
 
   const transcend = useCallback(() => {
     setGameState(prev => {
       const gain = calculateTranscendenceGain(prev);
-      if(gain<=0) return prev;
-      let newState = {...getInitialState(), clicks:getStartingClicks(prev), transcendenceTree: prev.transcendenceTree, eternityTree: prev.eternityTree, achievements: prev.achievements, questState: prev.questState, transcendencePoints: prev.transcendencePoints+gain, totalTranscendencePoints: prev.totalTranscendencePoints+gain, totalTranscendences: prev.totalTranscendences+1, eternityPoints: prev.eternityPoints, totalEternityPoints: prev.totalEternityPoints, totalEternities: prev.totalEternities, stats: prev.stats};
-      return updateQuestProgress(newState,'transcendence',gain);
+      if (gain <= 0) return prev;
+
+      const newState: GameState = {
+        ...getInitialState(),
+        transcendencePoints: prev.transcendencePoints + gain,
+        totalTranscendencePoints: prev.totalTranscendencePoints + gain,
+        totalTranscendences: prev.totalTranscendences + 1,
+        skillTree: prev.skillTree,
+        ascensionTree: prev.ascensionTree,
+        transcendenceTree: prev.transcendenceTree,
+        eternityTree: prev.eternityTree,
+        achievements: prev.achievements,
+        questState: prev.questState,
+      };
+
+      newState.clickPower = calculateClickPower(newState);
+      newState.cps = calculateCPS(newState);
+      return updateQuestProgress(newState, 'transcendences', gain);
     });
-  }, [calculateTranscendenceGain,getStartingClicks,updateQuestProgress]);
+  }, [updateQuestProgress]);
 
   const enterEternity = useCallback(() => {
     setGameState(prev => {
       const gain = calculateEternityGain(prev);
-      if(gain<=0) return prev;
-      let newState = {...getInitialState(), eternityTree: prev.eternityTree, achievements: prev.achievements, questState: prev.questState, eternityPoints: prev.eternityPoints+gain, totalEternityPoints: prev.totalEternityPoints+gain, totalEternities: prev.totalEternities+1, stats: prev.stats};
-      return updateQuestProgress(newState,'eternity',gain);
-    });
-  }, [calculateEternityGain,updateQuestProgress]);
+      if (gain <= 0) return prev;
 
-  // -----------------------------
-  // Claim rewards
-  // -----------------------------
+      const newState: GameState = {
+        ...getInitialState(),
+        eternityPoints: prev.eternityPoints + gain,
+        totalEternityPoints: prev.totalEternityPoints + gain,
+        totalEternities: prev.totalEternities + 1,
+        skillTree: prev.skillTree,
+        ascensionTree: prev.ascensionTree,
+        transcendenceTree: prev.transcendenceTree,
+        eternityTree: prev.eternityTree,
+        achievements: prev.achievements,
+        questState: prev.questState,
+      };
+
+      newState.clickPower = calculateClickPower(newState);
+      newState.cps = calculateCPS(newState);
+      return updateQuestProgress(newState, 'eternities', gain);
+    });
+  }, [updateQuestProgress]);
+
+  /* ---------- Quest / Challenge Rewards ---------- */
   const claimQuestReward = useCallback((questId: string) => {
     setGameState(prev => {
       const quest = prev.questState.quests.find(q => q.id === questId);
-      if(!quest || quest.claimed || !quest.completed) return prev;
-      return {...prev, clicks: prev.clicks + (quest.rewards.clicks||0), prestigePoints: prev.prestigePoints+(quest.rewards.prestigePoints||0), ascensionPoints: prev.ascensionPoints+(quest.rewards.ascensionPoints||0), questState: {...prev.questState, quests: prev.questState.quests.map(q => q.id===questId ? {...q, claimed:true} : q)}};
+      if (!quest || !quest.completed || quest.claimed) return prev;
+      return {
+        ...prev,
+        clicks: prev.clicks + (quest.rewards.clicks || 0),
+        prestigePoints: prev.prestigePoints + (quest.rewards.prestigePoints || 0),
+        ascensionPoints: prev.ascensionPoints + (quest.rewards.ascensionPoints || 0),
+        questState: {
+          ...prev.questState,
+          quests: prev.questState.quests.map(q => q.id === questId ? { ...q, claimed: true } : q),
+        },
+      };
     });
   }, []);
 
   const claimChallengeReward = useCallback((challengeId: string) => {
     setGameState(prev => {
-      const challenge = prev.questState.challenges.find(c => c.id===challengeId);
-      if(!challenge || challenge.claimed || !challenge.completed) return prev;
-      return {...prev, clicks: prev.clicks+(challenge.rewards.clicks||0), prestigePoints: prev.prestigePoints+(challenge.rewards.prestigePoints||0), questState: {...prev.questState, challenges: prev.questState.challenges.map(c=>c.id===challengeId?{...c,claimed:true}:c)}};
+      const challenge = prev.questState.challenges.find(c => c.id === challengeId);
+      if (!challenge || !challenge.completed || challenge.claimed) return prev;
+      return {
+        ...prev,
+        clicks: prev.clicks + (challenge.rewards.clicks || 0),
+        prestigePoints: prev.prestigePoints + (challenge.rewards.prestigePoints || 0),
+        questState: {
+          ...prev.questState,
+          challenges: prev.questState.challenges.map(c => c.id === challengeId ? { ...c, claimed: true } : c),
+        },
+      };
     });
   }, []);
 
-  const claimEventReward = useCallback((eventId: string) => {
+  const addLeaderboardScore = useCallback((name: string, type: LeaderboardEntry['type']) => {
     setGameState(prev => {
-      const event = prev.questState.events.find(e=>e.id===eventId);
-      if(!event || event.claimed || !event.completed) return prev;
-      return {...prev, clicks: prev.clicks+(event.rewards.clicks||0), prestigePoints: prev.prestigePoints+(event.rewards.prestigePoints||0), ascensionPoints: prev.ascensionPoints+(event.rewards.ascensionPoints||0), questState: {...prev.questState, events: prev.questState.events.map(e=>e.id===eventId?{...e,claimed:true}:e)}};
+      const score = type === 'lifetime' ? prev.lifetimeClicks : type === 'cps' ? prev.cps : prev.totalPrestiges;
+      const newEntry: LeaderboardEntry = { id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, name, score, date: Date.now(), type };
+      const newLeaderboard = [...prev.questState.leaderboard, newEntry].sort((a, b) => b.score - a.score).slice(0, 50);
+      return { ...prev, questState: { ...prev.questState, leaderboard: newLeaderboard } };
     });
   }, []);
 
-  const addLeaderboardScore = useCallback((name:string,type:'lifetime'|'cps'|'prestiges')=>{
-    setGameState(prev=>{
-      const score = type==='lifetime'?prev.lifetimeClicks:type==='cps'?prev.cps:prev.totalPrestiges;
-      const newEntry = {id:`${Date.now()}-${Math.random()}`, name, score, date:Date.now(), type};
-      return {...prev, questState:{...prev.questState, leaderboard:[...prev.questState.leaderboard,newEntry].sort((a,b)=>b.score-a.score).slice(0,100)}};
-    });
-  },[]);
-
-  const resetGame = useCallback(()=>{
-    if(confirm('Are you sure you want to reset all progress?')){
+  const resetGame = useCallback(() => {
+    if (confirm('Are you sure you want to reset all progress?')) {
       localStorage.removeItem(STORAGE_KEY);
       setGameState(getInitialState());
     }
-  },[]);
+  }, []);
 
-  const saveGame = useCallback(()=>{
-    localStorage.setItem(STORAGE_KEY,JSON.stringify({...gameState, stats:{...gameState.stats,lastOnlineTime:Date.now()}}));
-  },[gameState]);
+  const saveGame = useCallback(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...gameState, stats: { ...gameState.stats, lastOnlineTime: Date.now() } }));
+  }, [gameState]);
 
-  // -----------------------------
-  // Auto-click & Stats Loop
-  // -----------------------------
-  useEffect(()=>{
-    const interval = setInterval(()=>{
+  /* ---------- Auto Clicker & Stats Loop ---------- */
+  useEffect(() => {
+    const interval = setInterval(() => {
       const now = Date.now();
-      const delta = (now - lastTickRef.current)/1000;
+      const delta = (now - lastTickRef.current) / 1000;
       lastTickRef.current = now;
 
-      setGameState(prev=>{
-        let newClicks = prev.clicks + prev.cps * delta;
-        let newLifetime = prev.lifetimeClicks + prev.cps * delta;
-        let newState = {...prev, clicks:newClicks, lifetimeClicks:newLifetime};
-        newState = updateQuestProgress(newState,'clicks',prev.cps*delta);
-
-        prev.questState.events.forEach(event=>{
-          if(event.completed && !event.claimed) newState = updateEventProgress(newState,event.id);
-        });
-
-        const newBestCPS = Math.max(prev.stats.bestCPS,prev.cps);
-        const shouldAddHistory = prev.stats.cpsHistory.length===0 || now-(prev.stats.cpsHistory[prev.stats.cpsHistory.length-1]?.time||0) > 10000;
-        const newCpsHistory = shouldAddHistory ? [...prev.stats.cpsHistory.slice(-50), {time:now, cps:prev.cps}] : prev.stats.cpsHistory;
-        const newClicksHistory = shouldAddHistory ? [...prev.stats.clicksHistory.slice(-50), {time:now, clicks:newLifetime}] : prev.stats.clicksHistory;
-
-        newState.stats = {...prev.stats, totalPlaytime: prev.stats.totalPlaytime + delta, bestCPS:newBestCPS, cpsHistory:newCpsHistory, clicksHistory:newClicksHistory};
+      setGameState(prev => {
+        let newState = {
+          ...prev,
+          clicks: prev.clicks + prev.cps * delta,
+          lifetimeClicks: prev.lifetimeClicks + prev.cps * delta,
+          stats: { ...prev.stats, totalPlaytime: prev.stats.totalPlaytime + delta, lastOnlineTime: now, bestCPS: Math.max(prev.stats.bestCPS, prev.cps) },
+        };
+        newState = updateQuestProgress(newState, 'cps', 0);
         return newState;
       });
-    },100);
+    }, 100);
 
-    return ()=>clearInterval(interval);
-  },[updateQuestProgress, updateEventProgress]);
+    return () => clearInterval(interval);
+  }, [updateQuestProgress]);
 
-  // -----------------------------
-  // Auto-save
-  // -----------------------------
-  useEffect(()=>{
-    const interval = setInterval(()=>saveGame(),30000);
-    return ()=>clearInterval(interval);
-  },[saveGame]);
+  /* ---------- Auto Save ---------- */
+  useEffect(() => {
+    const interval = setInterval(() => saveGame(), 30000);
+    return () => clearInterval(interval);
+  }, [saveGame]);
+
+  useEffect(() => {
+    const handleUnload = () => saveGame();
+    window.addEventListener('beforeunload', handleUnload);
+    return () => window.removeEventListener('beforeunload', handleUnload);
+  }, [saveGame]);
 
   return {
     gameState,
     handleClick,
     buyUpgrade,
     buyUpgradeBulk,
+    buySkillNode,
+    buyAscensionNode,
+    buyTranscendenceNode,
+    buyEternityNode,
     prestige,
     ascend,
     transcend,
     enterEternity,
-    resetGame,
-    saveGame,
-    getUpgradeCost,
-    calculatePrestigeGain,
-    calculateAscensionGain,
-    calculateTranscendenceGain,
-    calculateEternityGain,
-    offlineEarnings,
     claimQuestReward,
     claimChallengeReward,
-    claimEventReward,
     addLeaderboardScore,
+    resetGame,
+    saveGame,
+    offlineEarnings,
   };
 }
