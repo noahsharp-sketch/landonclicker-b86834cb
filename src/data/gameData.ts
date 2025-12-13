@@ -13,7 +13,7 @@ export const initialUpgrades: Upgrade[] = [
   { id: 'megaAuto', name: "💕 Benicio's Love", description: '+2 auto-clickers', baseCost: 5000, costMultiplier: 1.3, owned: 0, effect: 2, type: 'autoClicker' },
   { id: 'Evil Ben G', name: '😈 Evil Ben G', description: '+5 auto-clickers', baseCost: 150000, costMultiplier: 1.35, owned: 0, effect: 5, type: 'autoClicker' },
   { id: 'robot', name: '🤖 Robot Helper', description: '+15 auto-clickers', baseCost: 10000000, costMultiplier: 1.4, owned: 0, effect: 15, type: 'autoClicker' },
-  { id: 'hivemind', name: '🧠 Hivemind', description: '+50 auto-clickers', baseCost: 500000000, costMultiplier: 1.45, owned: 0, effect: 50, type: 'autoClicker' },
+  { id: 'hivemind', name: '🧠 Hivemind', description: '+150 auto-clickers', baseCost: 500000000, costMultiplier: 1.45, owned: 0, effect: 150, type: 'autoClicker' },
 ];
 
 export const initialSkillTree: SkillNode[] = [
