@@ -209,6 +209,14 @@ export function useGameState() {
   }, [getUpgradeCost]);
 
   /** ---------------------------
+   * Tree Upgrade Wrappers
+   */
+  const buyPrestigeUpgrade = useCallback((id: string) => buyTreeUpgrade('ascensionTree', 'prestigePoints', id), [buyTreeUpgrade]);
+  const buyAscensionUpgrade = useCallback((id: string) => buyTreeUpgrade('transcendenceTree', 'ascensionPoints', id), [buyTreeUpgrade]);
+  const buyTranscendenceUpgrade = useCallback((id: string) => buyTreeUpgrade('eternityTree', 'transcendencePoints', id), [buyTreeUpgrade]);
+  const buyEternityUpgrade = useCallback((id: string) => buyTreeUpgrade('eternityTree', 'eternityPoints', id), [buyTreeUpgrade]);
+
+  /** ---------------------------
    * Quest & Event Claiming
    */
   const claimQuestReward = useCallback((questId: string) => {
