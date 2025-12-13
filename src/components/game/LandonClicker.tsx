@@ -11,10 +11,13 @@ export function LandonClicker() {
     gameState,
     handleClick,
     buyUpgrade,
+    buyUpgradeBulk,
     buySkillNode,
     buyAscensionNode,
+    buyTranscendenceNode,
     prestige,
     ascend,
+    transcend,
     saveGame,
     resetGame,
     offlineEarnings,
@@ -36,8 +39,8 @@ export function LandonClicker() {
     setMusicEnabled,
   } = useSound();
 
-  // Check for active event multipliers to show indicator
-  const activeEvent = gameState.questState.events.find(e => e.active && !e.claimed);
+  // Check for active event multipliers
+  const activeEvent = gameState.questState?.events?.find(e => e.active && !e.claimed);
 
   return (
     <div className="min-h-screen flex flex-col bg-background crt-overlay">
@@ -97,6 +100,7 @@ export function LandonClicker() {
           <UpgradesPanel
             gameState={gameState}
             onBuyUpgrade={buyUpgrade}
+            onBuyUpgradeBulk={buyUpgradeBulk}
             playPurchase={playPurchase}
           />
         </aside>
@@ -106,8 +110,10 @@ export function LandonClicker() {
         gameState={gameState}
         onPrestige={() => { prestige(); playPrestige(); }}
         onAscend={() => { ascend(); playAscension(); }}
+        onTranscend={() => { transcend(); playAscension(); }}
         onBuySkillNode={(id) => { buySkillNode(id); playPurchase(); }}
         onBuyAscensionNode={(id) => { buyAscensionNode(id); playPurchase(); }}
+        onBuyTranscendenceNode={(id) => { buyTranscendenceNode(id); playPurchase(); }}
         onSave={saveGame}
         onReset={resetGame}
       />

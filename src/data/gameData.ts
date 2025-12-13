@@ -1,4 +1,4 @@
-import { Upgrade, SkillNode, AscensionNode, Achievement, GameState } from '../types/types';
+import { Upgrade, SkillNode, AscensionNode, TranscendenceNode, Achievement, GameState } from '../types/types';
 
 export const initialUpgrades: Upgrade[] = [
   { id: 'energy', name: '⚡ Energy Drink', description: '+2 click power', baseCost: 100, costMultiplier: 1.15, owned: 0, effect: 2, type: 'clickPower' },
@@ -33,6 +33,16 @@ export const initialAscensionTree: AscensionNode[] = [
   { id: 'asc7', name: '🌌 Cosmic Power', description: '5x ALL production. Cosmic level boost!', cost: 8, owned: false, effect: 5, type: 'allMulti' },
 ];
 
+export const initialTranscendenceTree: TranscendenceNode[] = [
+  { id: 'trans1', name: '🌌 Cosmic Genesis', description: '10x ALL production permanently. Reality bends to your will!', cost: 1, owned: false, effect: 10, type: 'globalMulti' },
+  { id: 'trans2', name: '✨ Ascension Mastery', description: '5x Ascension Point gains. Ascend like a god!', cost: 2, owned: false, effect: 5, type: 'ascensionMulti' },
+  { id: 'trans3', name: '♾️ Infinite Power', description: '100x click power. Your clicks shake the universe!', cost: 3, owned: false, effect: 100, type: 'infinitePower' },
+  { id: 'trans4', name: '🌠 Cosmic Start', description: 'Start with 1B clicks after any reset. Time is meaningless!', cost: 4, owned: false, effect: 1000000000, type: 'cosmicStart' },
+  { id: 'trans5', name: '🔮 Eternity Boost', description: '50x CPS multiplier. Your auto-clickers transcend time!', cost: 5, owned: false, effect: 50, type: 'eternityBoost' },
+  { id: 'trans6', name: '💫 Universal Mastery', description: '25x ALL production. Master of all realities!', cost: 8, owned: false, effect: 25, type: 'globalMulti' },
+  { id: 'trans7', name: '🌀 Omnipotence', description: '1000x click power. Become one with infinity!', cost: 15, owned: false, effect: 1000, type: 'infinitePower' },
+];
+
 export function createInitialAchievements(): Achievement[] {
   return [
     { id: 'first_click', name: 'First Click', description: 'Click for the first time', icon: '👆', unlocked: false, condition: (s: GameState) => s.lifetimeClicks >= 1 },
@@ -47,7 +57,9 @@ export function createInitialAchievements(): Achievement[] {
     { id: 'prestige_5', name: 'Prestige Pro', description: 'Prestige 5 times', icon: '🏅', unlocked: false, condition: (s: GameState) => s.totalPrestiges >= 5 },
     { id: 'cps_100', name: 'Auto Clicker', description: 'Reach 100 CPS', icon: '⚡', unlocked: false, condition: (s: GameState) => s.cps >= 100 },
     { id: 'cps_1000', name: 'Speed Demon', description: 'Reach 1,000 CPS', icon: '🚀', unlocked: false, condition: (s: GameState) => s.cps >= 1000 },
-    { id: 'first_ascension', name: 'Ascended', description: 'Ascend for the first time', icon: '🌌', unlocked: false, condition: (s: GameState) => s.totalAscensionPoints >= 1 },
+    { id: 'first_ascension', name: 'Ascended', description: 'Ascend for the first time', icon: '🌌', unlocked: false, condition: (s: GameState) => s.totalAscensions >= 1 },
     { id: 'skill_complete', name: 'Skill Master', description: 'Unlock all prestige skills', icon: '🎓', unlocked: false, condition: (s: GameState) => s.skillTree.every(n => n.owned) },
+    { id: 'first_transcendence', name: 'Transcended', description: 'Transcend for the first time', icon: '🌀', unlocked: false, condition: (s: GameState) => s.totalTranscendences >= 1 },
+    { id: 'transcendence_master', name: 'Beyond Reality', description: 'Unlock all Transcendence skills', icon: '♾️', unlocked: false, condition: (s: GameState) => s.transcendenceTree.every(n => n.owned) },
   ];
 }
