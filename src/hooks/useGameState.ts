@@ -218,6 +218,54 @@ export function useGameState() {
   }, [calculateClickPower, calculateCPS]);
 
   /** ---------------------------
+   * Prestige/Ascension/Transcend/Eternity Upgrades
+   * (OLD STYLE BUYING)
+   * --------------------------- */
+  const buyPrestigeUpgrade = useCallback((id: string) => {
+    setGameState(prev => {
+      const upgrade = prev.upgrades.find(u => u.id === id);
+      if (!upgrade) return prev;
+      const cost = Math.floor(upgrade.baseCost * Math.pow(upgrade.costMultiplier, upgrade.owned));
+      if (prev.prestigePoints < cost) return prev;
+      const newUpgrades = prev.upgrades.map(u => u.id === id ? { ...u, owned: u.owned + 1 } : u);
+      return { ...prev, upgrades: newUpgrades, prestigePoints: prev.prestigePoints - cost };
+    });
+  }, []);
+
+  const buyAscensionUpgrade = useCallback((id: string) => {
+    setGameState(prev => {
+      const upgrade = prev.upgrades.find(u => u.id === id);
+      if (!upgrade) return prev;
+      const cost = Math.floor(upgrade.baseCost * Math.pow(upgrade.costMultiplier, upgrade.owned));
+      if (prev.ascensionPoints < cost) return prev;
+      const newUpgrades = prev.upgrades.map(u => u.id === id ? { ...u, owned: u.owned + 1 } : u);
+      return { ...prev, upgrades: newUpgrades, ascensionPoints: prev.ascensionPoints - cost };
+    });
+  }, []);
+
+  const buyTranscendenceUpgrade = useCallback((id: string) => {
+    setGameState(prev => {
+      const upgrade = prev.upgrades.find(u => u.id === id);
+      if (!upgrade) return prev;
+      const cost = Math.floor(upgrade.baseCost * Math.pow(upgrade.costMultiplier, upgrade.owned));
+      if (prev.transcendencePoints < cost) return prev;
+      const newUpgrades = prev.upgrades.map(u => u.id === id ? { ...u, owned: u.owned + 1 } : u);
+      return { ...prev, upgrades: newUpgrades, transcendencePoints: prev.transcendencePoints - cost };
+    });
+  }, []);
+
+  const buyEternityUpgrade = useCallback((id: string) => {
+    setGameState(prev => {
+      const upgrade = prev.upgrades.find(u => u.id === id);
+      if (!upgrade) return prev;
+      const cost = Math.floor(upgrade.baseCost * Math.pow(upgrade.costMultiplier, upgrade.owned));
+      if (prev.eternityPoints < cost) return prev;
+      const newUpgrades = prev.upgrades.map(u => u.id === id ? { ...u, owned: u.owned + 1 } : u);
+      return { ...prev, upgrades: newUpgrades, eternityPoints: prev.eternityPoints - cost };
+    });
+  }, []);
+
+  /** ---------------------------
    * Save / Reset
    * --------------------------- */
   const saveGame = useCallback(() => {
@@ -254,5 +302,16 @@ export function useGameState() {
     return () => clearInterval(interval);
   }, [saveGame]);
 
-  return { gameState, handleClick, buyUpgrade, buyUpgradeBulk, resetGame, saveGame };
+  return {
+    gameState,
+    handleClick,
+    buyUpgrade,
+    buyUpgradeBulk,
+    buyPrestigeUpgrade,
+    buyAscensionUpgrade,
+    buyTranscendenceUpgrade,
+    buyEternityUpgrade,
+    resetGame,
+    saveGame,
+  };
 }
