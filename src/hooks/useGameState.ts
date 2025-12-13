@@ -8,7 +8,7 @@ import {
   createInitialAchievements,
 } from '../data/gameData';
 import { createInitialQuestState, generateSpecialEvents } from '../data/questData';
-import { updateProgress, getStat, resetPeriodicQuests } from '../utils/progressTracker';
+import { getStat, updateProgress, resetPeriodicQuests } from '../utils/progressTracker';
 import type { GameState } from '../types/types';
 
 const STORAGE_KEY = 'landon-clicker-save';
@@ -78,9 +78,6 @@ export function useGameState() {
 
       if (offlineClicks > 0) setOfflineEarnings(offlineClicks);
 
-      const mergedAchievements = mergeArrayById(saved.achievements || [], fresh.achievements)
-        .map(a => ({ ...a, current: a.current || 0, completed: !!a.completed }));
-
       return {
         ...fresh,
         ...saved,
@@ -91,7 +88,8 @@ export function useGameState() {
         ascensionTree: mergeArrayById(saved.ascensionTree || [], fresh.ascensionTree),
         transcendenceTree: mergeArrayById(saved.transcendenceTree || [], fresh.transcendenceTree),
         eternityTree: mergeArrayById(saved.eternityTree || [], fresh.eternityTree),
-        achievements: mergedAchievements,
+        achievements: mergeArrayById(saved.achievements || [], fresh.achievements)
+          .map(a => ({ ...a, current: a.current || 0, completed: !!a.completed })),
         questState: {
           ...fresh.questState,
           ...saved.questState,
@@ -110,7 +108,7 @@ export function useGameState() {
 
   /** ---------------------------
    * Calculations
-   * --------------------------- */
+   */
   const calculateClickPower = useCallback((state: GameState) => {
     let power = 1;
     state.upgrades.filter(u => u.type === 'clickPower').forEach(u => power += u.effect * u.owned);
@@ -137,7 +135,7 @@ export function useGameState() {
 
   /** ---------------------------
    * Core Actions
-   * --------------------------- */
+   */
   const handleClick = useCallback(() => {
     setGameState(prev => updateProgress({
       ...prev,
@@ -206,7 +204,7 @@ export function useGameState() {
 
   /** ---------------------------
    * Quest & Event Claiming
-   --------------------------- */
+   */
   const claimQuestReward = useCallback((questId: string) => {
     setGameState(prev => {
       const quest = prev.questState.quests.find(q => q.id === questId);
