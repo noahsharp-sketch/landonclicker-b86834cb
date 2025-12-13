@@ -12,7 +12,7 @@ export const initialUpgrades: Upgrade[] = [
   { id: 'sean', name: "💜 Sean's Love", description: '+1 auto-clicker', baseCost: 200, costMultiplier: 1.2, owned: 0, effect: 1, type: 'autoClicker' },
   { id: 'megaAuto', name: "💕 Benicio's Love", description: '+3 auto-clickers', baseCost: 5000, costMultiplier: 1.3, owned: 0, effect: 3, type: 'autoClicker' },
   { id: 'Evil Ben G', name: '😈 Evil Ben G', description: '+10 auto-clickers', baseCost: 150000, costMultiplier: 1.35, owned: 0, effect: 10, type: 'autoClicker' },
-  { id: 'robot', name: '🤖 Robot Helper', description: '+50 auto-clickers', baseCost: 10000000, costMultiplier: 1.4, owned: 0, effect: 50, type: 'autoClicker' },
+  { id: 'robot', name: '🤖 Robot Helper', description: '+50 auto-clickers', baseCost: 15000000, costMultiplier: 1.4, owned: 0, effect: 50, type: 'autoClicker' },
   { id: 'hivemind', name: '🧠 Hivemind', description: '+150 auto-clickers', baseCost: 500000000, costMultiplier: 1.45, owned: 0, effect: 150, type: 'autoClicker' },
 ];
 
