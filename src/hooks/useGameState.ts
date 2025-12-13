@@ -69,6 +69,7 @@ export function useGameState() {
     try {
       const parsed = JSON.parse(saved);
       const fresh = getInitialState();
+
       const lastOnline = parsed.stats?.lastOnlineTime || Date.now();
       const offlineSeconds = Math.min((Date.now() - lastOnline) / 1000, 86400);
       const offlineClicks = Math.floor((parsed.cps || 0) * offlineSeconds * 0.5);
@@ -92,56 +93,48 @@ export function useGameState() {
         questState: {
           ...fresh.questState,
           ...parsed.questState,
-          quests: parsed.questState?.quests || fresh.questState.quests,
-          challenges: parsed.questState?.challenges || fresh.questState.challenges,
           events: generateSpecialEvents(),
-          leaderboard: parsed.questState?.leaderboard || [],
         },
-        stats: { ...fresh.stats, ...parsed.stats, lastOnlineTime: Date.now() },
+        stats: {
+          ...fresh.stats,
+          ...parsed.stats,
+          lastOnlineTime: Date.now(),
+        },
       };
     } catch {
       return getInitialState();
     }
   });
 
-  // -----------------------------
-  // Calculations
-  // -----------------------------
+  /** --------------------------
+   * Calculations
+   * -------------------------- */
   const calculateClickPower = useCallback((state: GameState) => {
     let power = 1;
-    state.upgrades.forEach(u => {
-      if (u.type === 'clickPower') power += u.effect * u.owned;
-    });
-    state.skillTree.forEach(s => { if (s.owned && s.type === 'clickMulti') power *= s.effect; });
-    state.transcendenceTree.forEach(t => { if (t.owned && ['infinitePower','globalMulti'].includes(t.type)) power *= t.effect; });
-    state.eternityTree.forEach(e => { if (e.owned && e.type === 'omnipotent') power *= e.effect; });
+    state.upgrades.filter(u => u.type === 'clickPower').forEach(u => power += u.effect * u.owned);
+    state.skillTree.filter(s => s.owned && s.type === 'clickMulti').forEach(s => power *= s.effect);
+    state.transcendenceTree.filter(t => t.owned && t.type === 'infinitePower').forEach(t => power *= t.effect);
+    state.transcendenceTree.filter(t => t.owned && t.type === 'globalMulti').forEach(t => power *= t.effect);
+    state.eternityTree.filter(e => e.owned && e.type === 'omnipotent').forEach(e => power *= e.effect);
     return power;
   }, []);
 
   const calculateCPS = useCallback((state: GameState) => {
     let cps = 0;
-    state.upgrades.forEach(u => { if (u.type === 'autoClicker') cps += u.effect * u.owned * state.clickPower; });
-    state.skillTree.forEach(s => { if (s.owned && ['cpsBoost','cpsMulti'].includes(s.type)) cps *= s.effect; });
-    state.ascensionTree.forEach(a => { if (a.owned && ['allMulti','ultimateCPS'].includes(a.type)) cps *= a.effect; });
-    state.transcendenceTree.forEach(t => { if (t.owned && ['eternityBoost','globalMulti'].includes(t.type)) cps *= t.effect; });
-    state.eternityTree.forEach(e => { if (e.owned && ['infiniteAuto','omnipotent'].includes(e.type)) cps *= e.effect; });
+    state.upgrades.filter(u => u.type === 'autoClicker').forEach(u => cps += u.effect * u.owned * state.clickPower);
+    state.skillTree.filter(s => s.owned && (s.type === 'cpsBoost' || s.type === 'cpsMulti')).forEach(s => cps *= s.effect);
+    state.ascensionTree.filter(a => a.owned && (a.type === 'allMulti' || a.type === 'ultimateCPS')).forEach(a => cps *= a.effect);
+    state.transcendenceTree.filter(t => t.owned && (t.type === 'eternityBoost' || t.type === 'globalMulti')).forEach(t => cps *= t.effect);
+    state.eternityTree.filter(e => e.owned && (e.type === 'infiniteAuto' || e.type === 'omnipotent')).forEach(e => cps *= e.effect);
     return cps;
   }, []);
 
-  const getUpgradeCost = useCallback((upgrade: { baseCost: number; costMultiplier: number; owned: number }) => {
-    return Math.floor(upgrade.baseCost * Math.pow(upgrade.costMultiplier, upgrade.owned));
-  }, []);
-
-  // -----------------------------
-  // Quest updates
-  // -----------------------------
+  /** --------------------------
+   * Quest & Achievement Tracking
+   * -------------------------- */
   const updateQuestList = useCallback((state: GameState) => {
-    const quests = state.questState?.quests || [];
-    const challenges = state.questState?.challenges || [];
-    const events = state.questState?.events || [];
-
     const getStat = (type: string) => {
-      switch(type) {
+      switch (type) {
         case 'clicks': return state.clicks;
         case 'lifetimeClicks': return state.lifetimeClicks;
         case 'cps': return state.cps;
@@ -155,79 +148,115 @@ export function useGameState() {
       }
     };
 
-    const updatedQuests = quests.map(q => {
-      const steps = q.steps.map(s => ({ ...s, current: getStat(s.type) }));
+    const updatedQuests = state.questState.quests?.map(q => {
+      const steps = q.steps.map(step => ({ ...step, current: getStat(step.type) }));
       const completed = steps.every(s => s.current >= s.target);
       const currentStep = steps.findIndex(s => s.current < s.target);
       return { ...q, steps, completed, currentStep: currentStep === -1 ? steps.length - 1 : currentStep };
-    });
+    }) || [];
 
-    const updatedChallenges = challenges.map(c => {
+    const updatedChallenges = state.questState.challenges?.map(c => {
       const current = getStat(c.conditionType || c.type);
       return { ...c, current, completed: current >= c.target };
-    });
+    }) || [];
 
-    const updatedEvents = events.map(e => {
-      const current = getStat(e.conditionType || e.type);
-      return { ...e, current, completed: current >= e.target };
-    });
-
-    return { ...state, questState: { ...state.questState, quests: updatedQuests, challenges: updatedChallenges, events: updatedEvents } };
+    return {
+      ...state,
+      questState: { ...state.questState, quests: updatedQuests, challenges: updatedChallenges },
+    };
   }, []);
 
-  // -----------------------------
-  // Core actions
-  // -----------------------------
+  const updateAchievements = useCallback((state: GameState) => {
+    const newAchievements = state.achievements?.map(a => {
+      if (a.completed) return a;
+      let current = 0;
+      switch (a.type) {
+        case 'clicks': current = state.clicks; break;
+        case 'lifetimeClicks': current = state.lifetimeClicks; break;
+        case 'cps': current = state.cps; break;
+        case 'upgrades': current = state.upgrades.reduce((sum, u) => sum + u.owned, 0); break;
+        case 'prestiges': current = state.totalPrestiges; break;
+        case 'ascensions': current = state.totalAscensions; break;
+        case 'transcendences': current = state.totalTranscendences; break;
+        case 'eternities': current = state.totalEternities; break;
+        default: current = 0;
+      }
+      const completed = current >= a.target;
+      return { ...a, current, completed };
+    }) || [];
+    return { ...state, achievements: newAchievements };
+  }, []);
+
+  const updateGameProgress = useCallback((state: GameState) => {
+    let newState = updateQuestList(state);
+    newState = updateAchievements(newState);
+    return newState;
+  }, [updateQuestList, updateAchievements]);
+
+  /** --------------------------
+   * Core Actions
+   * -------------------------- */
   const handleClick = useCallback(() => {
     setGameState(prev => {
-      const newState = { ...prev, clicks: prev.clicks + prev.clickPower, lifetimeClicks: prev.lifetimeClicks + prev.clickPower };
-      return updateQuestList(newState);
+      let newState = {
+        ...prev,
+        clicks: prev.clicks + prev.clickPower,
+        lifetimeClicks: prev.lifetimeClicks + prev.clickPower,
+      };
+      newState = updateGameProgress(newState);
+      return newState;
     });
-  }, [updateQuestList]);
+  }, [updateGameProgress]);
 
   const buyUpgrade = useCallback((id: string) => {
     setGameState(prev => {
       const upgrade = prev.upgrades.find(u => u.id === id);
       if (!upgrade) return prev;
-      const cost = getUpgradeCost(upgrade);
+      const cost = Math.floor(upgrade.baseCost * Math.pow(upgrade.costMultiplier, upgrade.owned));
       if (prev.clicks < cost) return prev;
 
-      const newState = {
-        ...prev,
+      let newState = { 
+        ...prev, 
         upgrades: prev.upgrades.map(u => u.id === id ? { ...u, owned: u.owned + 1 } : u),
-        clicks: prev.clicks - cost
+        clicks: prev.clicks - cost,
       };
-      return { ...newState, clickPower: calculateClickPower(newState), cps: calculateCPS(newState) };
+      newState = { ...newState, clickPower: calculateClickPower(newState), cps: calculateCPS(newState) };
+      newState = updateGameProgress(newState);
+      return newState;
     });
-  }, [calculateClickPower, calculateCPS, getUpgradeCost]);
+  }, [calculateClickPower, calculateCPS, updateGameProgress]);
 
-  const buyUpgradeBulk = useCallback((id: string, amount: number | "MAX") => {
+  const buyUpgradeBulk = useCallback((id: string, amount: number | 'MAX') => {
     setGameState(prev => {
       const upgrade = prev.upgrades.find(u => u.id === id);
       if (!upgrade) return prev;
 
       let clicks = prev.clicks;
       let owned = upgrade.owned;
+      let toBuy = amount === 'MAX' ? Infinity : amount;
       let bought = 0;
-      const toBuy = amount === "MAX" ? Infinity : amount;
 
       while (bought < toBuy) {
-        const cost = getUpgradeCost({ ...upgrade, owned });
-        if (clicks < cost) break;
-        clicks -= cost;
+        const nextCost = Math.floor(upgrade.baseCost * Math.pow(upgrade.costMultiplier, owned));
+        if (clicks < nextCost) break;
+        clicks -= nextCost;
         owned++;
         bought++;
       }
 
       if (bought === 0) return prev;
-      const newState = { ...prev, upgrades: prev.upgrades.map(u => u.id === id ? { ...u, owned } : u), clicks };
-      return { ...newState, clickPower: calculateClickPower(newState), cps: calculateCPS(newState) };
-    });
-  }, [calculateClickPower, calculateCPS, getUpgradeCost]);
 
-  // -----------------------------
-  // Main loop
-  // -----------------------------
+      let newState = { ...prev, upgrades: prev.upgrades.map(u => u.id === id ? { ...u, owned } : u), clicks };
+      newState = { ...newState, clickPower: calculateClickPower(newState), cps: calculateCPS(newState) };
+      newState = updateGameProgress(newState);
+
+      return newState;
+    });
+  }, [calculateClickPower, calculateCPS, updateGameProgress]);
+
+  /** --------------------------
+   * Auto-click & main loop
+   * -------------------------- */
   useEffect(() => {
     const interval = setInterval(() => {
       const now = Date.now();
@@ -236,30 +265,40 @@ export function useGameState() {
 
       setGameState(prev => {
         let newState = { ...prev, clicks: prev.clicks + prev.cps * delta, lifetimeClicks: prev.lifetimeClicks + prev.cps * delta };
-        return updateQuestList(newState);
+        newState = updateGameProgress(newState);
+        tickCounterRef.current++;
+        return newState;
       });
     }, 100);
 
     return () => clearInterval(interval);
-  }, [updateQuestList]);
+  }, [updateGameProgress]);
 
-  // -----------------------------
-  // Auto-save
-  // -----------------------------
-  useEffect(() => {
-    const interval = setInterval(() => {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...gameState, stats: { ...gameState.stats, lastOnlineTime: Date.now() } }));
-    }, 30000);
-    return () => clearInterval(interval);
+  /** --------------------------
+   * Save & reset
+   * -------------------------- */
+  const saveGame = useCallback(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...gameState, stats: { ...gameState.stats, lastOnlineTime: Date.now() } }));
   }, [gameState]);
+
+  useEffect(() => {
+    const interval = setInterval(saveGame, 30000);
+    return () => clearInterval(interval);
+  }, [saveGame]);
+
+  const resetGame = useCallback(() => {
+    if (confirm('Are you sure you want to reset all progress?')) {
+      localStorage.removeItem(STORAGE_KEY);
+      setGameState(getInitialState());
+    }
+  }, []);
 
   return {
     gameState,
     handleClick,
     buyUpgrade,
     buyUpgradeBulk,
-    saveGame: () => localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...gameState, stats: { ...gameState.stats, lastOnlineTime: Date.now() } })),
-    getUpgradeCost,
-    offlineEarnings,
+    resetGame,
+    saveGame,
   };
 }
