@@ -9,6 +9,7 @@ import {
 } from '../data/gameData';
 import { createInitialQuestState, generateSpecialEvents } from '../data/questData';
 import { getStat, updateProgress, resetPeriodicQuests } from '../utils/progressTracker';
+import { updateAchievements } from '../utils/achievementTracker';
 import type { GameState } from '../types/types';
 
 const STORAGE_KEY = 'landon-clicker-save';
@@ -137,11 +138,15 @@ export function useGameState() {
    * Core Actions
    */
   const handleClick = useCallback(() => {
-    setGameState(prev => updateProgress({
-      ...prev,
-      clicks: prev.clicks + prev.clickPower,
-      lifetimeClicks: prev.lifetimeClicks + prev.clickPower,
-    }));
+    setGameState(prev => {
+      let updated = updateProgress({
+        ...prev,
+        clicks: prev.clicks + prev.clickPower,
+        lifetimeClicks: prev.lifetimeClicks + prev.clickPower,
+      });
+      updated.achievements = updateAchievements(updated);
+      return updated;
+    });
   }, []);
 
   const buyUpgrade = useCallback((id: string) => {
@@ -150,10 +155,12 @@ export function useGameState() {
       if (!upgrade) return prev;
       const cost = getUpgradeCost(upgrade);
       if (prev.clicks < cost) return prev;
-      const next = { ...prev, upgrades: prev.upgrades.map(u => u.id === id ? { ...u, owned: u.owned + 1 } : u), clicks: prev.clicks - cost };
+      let next = { ...prev, upgrades: prev.upgrades.map(u => u.id === id ? { ...u, owned: u.owned + 1 } : u), clicks: prev.clicks - cost };
       next.clickPower = calculateClickPower(next);
       next.cps = calculateCPS(next);
-      return updateProgress(next);
+      next = updateProgress(next);
+      next.achievements = updateAchievements(next);
+      return next;
     });
   }, [calculateClickPower, calculateCPS, getUpgradeCost]);
 
@@ -175,10 +182,12 @@ export function useGameState() {
       }
       if (bought === 0) return prev;
 
-      const next = { ...prev, upgrades: prev.upgrades.map(u => u.id === id ? { ...u, owned } : u), clicks };
+      let next = { ...prev, upgrades: prev.upgrades.map(u => u.id === id ? { ...u, owned } : u), clicks };
       next.clickPower = calculateClickPower(next);
       next.cps = calculateCPS(next);
-      return updateProgress(next);
+      next = updateProgress(next);
+      next.achievements = updateAchievements(next);
+      return next;
     });
   }, [calculateClickPower, calculateCPS]);
 
@@ -192,15 +201,12 @@ export function useGameState() {
       if (!upgrade) return prev;
       const cost = getUpgradeCost(upgrade);
       if ((prev as any)[pointsKey] < cost) return prev;
-      const next = { ...prev, [tree]: prev[tree].map(u => u.id === upgradeId ? { ...u, owned: u.owned + 1 } : u), [pointsKey]: (prev as any)[pointsKey] - cost };
-      return updateProgress(next);
+      let next = { ...prev, [tree]: prev[tree].map(u => u.id === upgradeId ? { ...u, owned: u.owned + 1 } : u), [pointsKey]: (prev as any)[pointsKey] - cost };
+      next = updateProgress(next);
+      next.achievements = updateAchievements(next);
+      return next;
     });
   }, [getUpgradeCost]);
-
-  const buyPrestigeUpgrade = useCallback((id: string) => buyTreeUpgrade('ascensionTree', 'prestigePoints', id), [buyTreeUpgrade]);
-  const buyAscensionUpgrade = useCallback((id: string) => buyTreeUpgrade('transcendenceTree', 'ascensionPoints', id), [buyTreeUpgrade]);
-  const buyTranscendenceUpgrade = useCallback((id: string) => buyTreeUpgrade('eternityTree', 'transcendencePoints', id), [buyTreeUpgrade]);
-  const buyEternityUpgrade = useCallback((id: string) => buyTreeUpgrade('eternityTree', 'eternityPoints', id), [buyTreeUpgrade]);
 
   /** ---------------------------
    * Quest & Event Claiming
@@ -209,7 +215,7 @@ export function useGameState() {
     setGameState(prev => {
       const quest = prev.questState.quests.find(q => q.id === questId);
       if (!quest || quest.claimed || !quest.completed) return prev;
-      return updateProgress({
+      let next = {
         ...prev,
         clicks: prev.clicks + (quest.rewards.clicks || 0),
         prestigePoints: prev.prestigePoints + (quest.rewards.prestigePoints || 0),
@@ -218,7 +224,10 @@ export function useGameState() {
           ...prev.questState,
           quests: prev.questState.quests.map(q => q.id === questId ? { ...q, claimed: true } : q),
         },
-      });
+      };
+      next = updateProgress(next);
+      next.achievements = updateAchievements(next);
+      return next;
     });
   }, []);
 
@@ -226,7 +235,7 @@ export function useGameState() {
     setGameState(prev => {
       const event = prev.questState.events.find(e => e.id === eventId);
       if (!event || event.claimed || !event.completed) return prev;
-      return updateProgress({
+      let next = {
         ...prev,
         clicks: prev.clicks + (event.rewards.clicks || 0),
         prestigePoints: prev.prestigePoints + (event.rewards.prestigePoints || 0),
@@ -235,7 +244,10 @@ export function useGameState() {
           ...prev.questState,
           events: prev.questState.events.map(e => e.id === eventId ? { ...e, claimed: true } : e),
         },
-      });
+      };
+      next = updateProgress(next);
+      next.achievements = updateAchievements(next);
+      return next;
     });
   }, []);
 
@@ -254,7 +266,11 @@ export function useGameState() {
   }, [getInitialState]);
 
   useEffect(() => {
-    setGameState(prev => resetPeriodicQuests(prev));
+    setGameState(prev => {
+      let next = resetPeriodicQuests(prev);
+      next.achievements = updateAchievements(next);
+      return next;
+    });
   }, []);
 
   useEffect(() => {
@@ -263,11 +279,15 @@ export function useGameState() {
       const delta = (now - lastTickRef.current) / 1000;
       lastTickRef.current = now;
 
-      setGameState(prev => updateProgress({
-        ...prev,
-        clicks: prev.clicks + prev.cps * delta,
-        lifetimeClicks: prev.lifetimeClicks + prev.cps * delta,
-      }));
+      setGameState(prev => {
+        let next = updateProgress({
+          ...prev,
+          clicks: prev.clicks + prev.cps * delta,
+          lifetimeClicks: prev.lifetimeClicks + prev.cps * delta,
+        });
+        next.achievements = updateAchievements(next);
+        return next;
+      });
     }, 100);
     return () => clearInterval(interval);
   }, []);

@@ -34,7 +34,6 @@ export function updateProgress(state: GameState): GameState {
 
   return {
     ...state,
-    achievements: updateCollection(state.achievements),
     questState: {
       ...state.questState,
       quests: state.questState.quests.map(q => {
