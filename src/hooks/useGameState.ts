@@ -139,13 +139,13 @@ export function useGameState() {
    */
   const handleClick = useCallback(() => {
     setGameState(prev => {
-      let updated = updateProgress({
+      let next = updateProgress({
         ...prev,
         clicks: prev.clicks + prev.clickPower,
         lifetimeClicks: prev.lifetimeClicks + prev.clickPower,
       });
-      updated.achievements = updateAchievements(updated);
-      return updated;
+      next.achievements = updateAchievements(next);
+      return next;
     });
   }, []);
 
@@ -155,11 +155,18 @@ export function useGameState() {
       if (!upgrade) return prev;
       const cost = getUpgradeCost(upgrade);
       if (prev.clicks < cost) return prev;
-      let next = { ...prev, upgrades: prev.upgrades.map(u => u.id === id ? { ...u, owned: u.owned + 1 } : u), clicks: prev.clicks - cost };
+
+      let next = { 
+        ...prev, 
+        upgrades: prev.upgrades.map(u => u.id === id ? { ...u, owned: u.owned + 1 } : u), 
+        clicks: prev.clicks - cost 
+      };
+
       next.clickPower = calculateClickPower(next);
       next.cps = calculateCPS(next);
       next = updateProgress(next);
       next.achievements = updateAchievements(next);
+
       return next;
     });
   }, [calculateClickPower, calculateCPS, getUpgradeCost]);
@@ -182,11 +189,16 @@ export function useGameState() {
       }
       if (bought === 0) return prev;
 
-      let next = { ...prev, upgrades: prev.upgrades.map(u => u.id === id ? { ...u, owned } : u), clicks };
+      let next = { 
+        ...prev, 
+        upgrades: prev.upgrades.map(u => u.id === id ? { ...u, owned } : u), 
+        clicks 
+      };
       next.clickPower = calculateClickPower(next);
       next.cps = calculateCPS(next);
       next = updateProgress(next);
       next.achievements = updateAchievements(next);
+
       return next;
     });
   }, [calculateClickPower, calculateCPS]);
@@ -201,7 +213,13 @@ export function useGameState() {
       if (!upgrade) return prev;
       const cost = getUpgradeCost(upgrade);
       if ((prev as any)[pointsKey] < cost) return prev;
-      let next = { ...prev, [tree]: prev[tree].map(u => u.id === upgradeId ? { ...u, owned: u.owned + 1 } : u), [pointsKey]: (prev as any)[pointsKey] - cost };
+
+      let next = { 
+        ...prev, 
+        [tree]: prev[tree].map(u => u.id === upgradeId ? { ...u, owned: u.owned + 1 } : u), 
+        [pointsKey]: (prev as any)[pointsKey] - cost 
+      };
+
       next = updateProgress(next);
       next.achievements = updateAchievements(next);
       return next;
@@ -223,6 +241,7 @@ export function useGameState() {
     setGameState(prev => {
       const quest = prev.questState.quests.find(q => q.id === questId);
       if (!quest || quest.claimed || !quest.completed) return prev;
+
       let next = {
         ...prev,
         clicks: prev.clicks + (quest.rewards.clicks || 0),
@@ -233,6 +252,7 @@ export function useGameState() {
           quests: prev.questState.quests.map(q => q.id === questId ? { ...q, claimed: true } : q),
         },
       };
+
       next = updateProgress(next);
       next.achievements = updateAchievements(next);
       return next;
@@ -243,6 +263,7 @@ export function useGameState() {
     setGameState(prev => {
       const event = prev.questState.events.find(e => e.id === eventId);
       if (!event || event.claimed || !event.completed) return prev;
+
       let next = {
         ...prev,
         clicks: prev.clicks + (event.rewards.clicks || 0),
@@ -253,6 +274,7 @@ export function useGameState() {
           events: prev.questState.events.map(e => e.id === eventId ? { ...e, claimed: true } : e),
         },
       };
+
       next = updateProgress(next);
       next.achievements = updateAchievements(next);
       return next;
@@ -274,6 +296,7 @@ export function useGameState() {
   }, [getInitialState]);
 
   useEffect(() => {
+    // Reset daily/weekly quests
     setGameState(prev => {
       let next = resetPeriodicQuests(prev);
       next.achievements = updateAchievements(next);
@@ -297,6 +320,7 @@ export function useGameState() {
         return next;
       });
     }, 100);
+
     return () => clearInterval(interval);
   }, []);
 
